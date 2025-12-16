@@ -50,7 +50,7 @@ const getApiBase = () => {
     
     // If running on GitHub Pages, use the Hostinger backend URL
     if (hostname.includes('github.io') || hostname.includes('github.com')) {
-        return 'https://vegetable.bytevortexz.com/api';
+        return 'https://bytevortexz.com/vegetable/public/api';
     }
     
     // If running on the backend server itself (Hostinger), use relative URL
