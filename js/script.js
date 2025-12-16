@@ -36,8 +36,29 @@ const closeVegetableModalBtn = document.getElementById('close-vegetable-modal');
 const cancelBtn = document.getElementById('cancel-btn');
 const vegetablesList = document.getElementById('vegetables-list');
 
-// API base URL
-const API_BASE = '/api';
+// API base URL - Automatically detects environment
+// Works on both GitHub Pages and Hostinger backend server
+const getApiBase = () => {
+    // Check if API URL is set via data attribute (for manual override)
+    const container = document.querySelector('.container') || document.body;
+    const dataApiUrl = container.getAttribute('data-api-url');
+    if (dataApiUrl) {
+        return dataApiUrl;
+    }
+    
+    const hostname = window.location.hostname;
+    
+    // If running on GitHub Pages, use the Hostinger backend URL
+    if (hostname.includes('github.io') || hostname.includes('github.com')) {
+        return 'https://vegetable.bytevortexz.com/api';
+    }
+    
+    // If running on the backend server itself (Hostinger), use relative URL
+    // This covers: vegetable.bytevortexz.com, localhost, 127.0.0.1, etc.
+    return '/api';
+};
+
+const API_BASE = getApiBase();
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE;
