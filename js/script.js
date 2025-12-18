@@ -70,6 +70,10 @@ axios.interceptors.request.use(config => {
     if (authToken) {
         config.headers.Authorization = `Bearer ${authToken}`;
     }
+    // If sending FormData, remove Content-Type to let browser set it with boundary
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+    }
     return config;
 });
 
@@ -513,11 +517,7 @@ async function handleProfileImageUpload(event) {
         const formData = new FormData();
         formData.append('image', file);
         
-        const response = await axios.post('/profile/image', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
+        const response = await axios.post('/profile/image', formData);
         
         // Update current user data
         currentUser = response.data.user;
@@ -1374,19 +1374,13 @@ async function handleVegetableSubmit(e) {
     }
 
     try {
-        const config = {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        };
-
         let response;
         if (editingVegetableId) {
             // Use POST with _method=PUT for better FormData support
             formData.append('_method', 'PUT');
-            response = await axios.post(`/vegetables/${editingVegetableId}`, formData, config);
+            response = await axios.post(`/vegetables/${editingVegetableId}`, formData);
         } else {
-            response = await axios.post('/vegetables', formData, config);
+            response = await axios.post('/vegetables', formData);
         }
 
         showSuccessMessage(editingVegetableId ? 'Vegetable updated successfully!' : 'Vegetable added successfully!');
