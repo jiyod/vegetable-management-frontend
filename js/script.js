@@ -496,18 +496,26 @@ function showUserProfile() {
 }
 
 async function handleProfileImageUpload(event) {
+    console.log('🔵 handleProfileImageUpload called!', event);
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {
+        console.log('❌ No file selected');
+        return;
+    }
+    
+    console.log('✅ File selected:', file.name, file.type, file.size);
     
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
         showErrorMessage('Image size must be less than 5MB');
+        event.target.value = '';
         return;
     }
     
     // Validate file type
     if (!file.type.match('image.*')) {
         showErrorMessage('Please select a valid image file');
+        event.target.value = '';
         return;
     }
     
@@ -517,7 +525,10 @@ async function handleProfileImageUpload(event) {
         const formData = new FormData();
         formData.append('image', file);
         
+        console.log('Uploading profile image...');
         const response = await axios.post('/profile/image', formData);
+        console.log('Upload successful:', response.data);
+        console.log('Profile image URL received:', response.data.user?.profile_image);
         
         // Update current user data
         currentUser = response.data.user;
@@ -525,17 +536,41 @@ async function handleProfileImageUpload(event) {
         
         // Update avatar image
         const avatarImg = document.getElementById('profile-avatar');
-        avatarImg.src = currentUser.profile_image;
+        if (avatarImg && currentUser.profile_image) {
+            console.log('Setting image src to:', currentUser.profile_image);
+            avatarImg.src = currentUser.profile_image;
+            // Force image reload if it fails
+            avatarImg.onerror = function() {
+                console.error('Image failed to load:', this.src);
+                // Try to reload after a moment
+                setTimeout(() => {
+                    this.src = this.src + '?t=' + Date.now();
+                }, 1000);
+            };
+            avatarImg.onload = function() {
+                console.log('Image loaded successfully:', this.src);
+            };
+        }
         
         showSuccessMessage('Profile image updated successfully!');
         
     } catch (error) {
         console.error('Profile image upload error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+        });
+        
         if (error.response) {
             const data = error.response.data;
-            showErrorMessage(data.error?.description || 'Failed to update profile image');
+            const errorMsg = data.error?.description || data.message || 'Failed to update profile image';
+            showErrorMessage(errorMsg);
+        } else if (error.request) {
+            showErrorMessage('Network error. Please check your connection and try again.');
         } else {
-            showErrorMessage('Network error. Please try again.');
+            showErrorMessage('An error occurred. Please try again.');
         }
     } finally {
         hideLoading();
