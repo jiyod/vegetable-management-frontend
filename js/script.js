@@ -369,7 +369,8 @@ function switchTab(tab) {
 // Authentication functions
 async function handleLogin(e) {
     e.preventDefault();
-    showLoading();
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    showLoading(submitButton);
 
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
@@ -405,13 +406,14 @@ async function handleLogin(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading();
+        hideLoading(submitButton);
     }
 }
 
 async function handleRegister(e) {
     e.preventDefault();
-    showLoading();
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    showLoading(submitButton);
 
     const name = document.getElementById('register-name').value;
     const username = document.getElementById('register-username').value;
@@ -445,7 +447,7 @@ async function handleRegister(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading();
+        hideLoading(submitButton);
     }
 }
 
@@ -617,7 +619,8 @@ function closeForgotPasswordModal() {
 // Forgot password handlers
 async function handleForgotPasswordRequest(e) {
     e.preventDefault();
-    showLoading();
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    showLoading(submitButton);
 
     const username = document.getElementById('forgot-username').value.trim();
     const gmail = document.getElementById('forgot-gmail').value.trim();
@@ -648,13 +651,14 @@ async function handleForgotPasswordRequest(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading();
+        hideLoading(submitButton);
     }
 }
 
 async function handleForgotPasswordReset(e) {
     e.preventDefault();
-    showLoading();
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    showLoading(submitButton);
 
     const username = document.getElementById('forgot-reset-username').value.trim();
     const gmail = document.getElementById('forgot-reset-gmail').value.trim();
@@ -664,7 +668,7 @@ async function handleForgotPasswordReset(e) {
 
     if (password !== passwordConfirm) {
         showErrorMessage('Passwords do not match');
-        hideLoading();
+        hideLoading(submitButton);
         return;
     }
 
@@ -689,7 +693,7 @@ async function handleForgotPasswordReset(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading();
+        hideLoading(submitButton);
     }
 }
 
@@ -1137,43 +1141,73 @@ function showAdminSection() {
     loadSellers();
 }
 
-function showLoading() {
-    // Add loading state to buttons
-    const buttons = document.querySelectorAll('button[type="submit"]');
+function showLoading(button = null) {
+    // If specific button provided, only handle that one
+    const buttons = button ? [button] : document.querySelectorAll('button[type="submit"], button.btn-primary, button.btn-secondary');
+    
     buttons.forEach(btn => {
-        if (btn.textContent.trim() !== '') {
+        // Skip if already loading or disabled
+        if (btn.disabled || btn.classList.contains('loading-state')) return;
+        
+        // Save original text and HTML
+        const originalText = btn.textContent.trim();
+        if (originalText && originalText !== '') {
+            btn.setAttribute('data-original-text', originalText);
             btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span> Loading...';
+            btn.classList.add('loading-state');
+            
+            // Create loading spinner HTML
+            btn.innerHTML = '<span class="spinner"></span> <span class="loading-text">Loading...</span>';
         }
     });
 }
 
-function hideLoading() {
-    // Remove loading state from buttons
-    const buttons = document.querySelectorAll('button[type="submit"]');
+function hideLoading(button = null) {
+    // If specific button provided, only handle that one
+    const buttons = button ? [button] : document.querySelectorAll('button.loading-state, button[type="submit"]:disabled');
+    
     buttons.forEach(btn => {
         btn.disabled = false;
+        btn.classList.remove('loading-state');
+        
         // Restore original text based on button context
-        if (btn.closest('#loginForm')) {
-            btn.textContent = 'Login';
-        } else if (btn.closest('#registerForm')) {
-            btn.textContent = 'Register';
-        } else if (btn.closest('#vegetableForm')) {
-            btn.textContent = 'Save';
-        } else if (btn.closest('#quantity-form')) {
-            btn.textContent = 'Add to Cart';
-        } else if (btn.closest('#checkout-form')) {
-            btn.textContent = 'Place Order';
-        } else {
-            // For any other submit button, try to restore from data attribute or default
-            const originalText = btn.getAttribute('data-original-text');
-            if (originalText) {
-                btn.textContent = originalText;
-            } else if (btn.textContent.includes('Loading')) {
-                // Fallback: remove loading text
-                btn.textContent = btn.textContent.replace(/Loading\.\.\./g, '').trim();
+        let originalText = btn.getAttribute('data-original-text');
+        
+        if (!originalText) {
+            // Try to determine from form context
+            const form = btn.closest('form');
+            if (form) {
+                if (form.id === 'loginForm') {
+                    originalText = 'Login';
+                } else if (form.id === 'registerForm') {
+                    originalText = 'Register';
+                } else if (form.id === 'vegetableForm') {
+                    originalText = 'Save';
+                } else if (form.id === 'quantity-form') {
+                    originalText = 'Add to Cart';
+                } else if (form.id === 'checkout-form') {
+                    originalText = 'Place Order';
+                } else if (form.id === 'forgot-password-request-form') {
+                    originalText = 'Send Code';
+                } else if (form.id === 'forgot-password-reset-form') {
+                    originalText = 'Reset Password';
+                }
             }
         }
+        
+        // Restore button text
+        if (originalText) {
+            btn.textContent = originalText;
+        } else {
+            // Fallback: try to extract from loading text
+            const loadingText = btn.querySelector('.loading-text');
+            if (loadingText) {
+                btn.textContent = btn.textContent.replace('Loading...', '').trim();
+            }
+        }
+        
+        // Remove data attribute
+        btn.removeAttribute('data-original-text');
     });
 }
 
@@ -1383,7 +1417,8 @@ function closeVegetableModal() {
 
 async function handleVegetableSubmit(e) {
     e.preventDefault();
-    showLoading();
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    showLoading(submitButton);
 
     const formData = new FormData();
     const name = document.getElementById('vegetable-name').value.trim();
@@ -1446,7 +1481,7 @@ async function handleVegetableSubmit(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading();
+        hideLoading(submitButton);
     }
 }
 
@@ -1800,6 +1835,7 @@ function closeQuantityModal() {
 
 async function handleQuantitySubmit(e) {
     e.preventDefault();
+    const submitButton = e.target.querySelector('button[type="submit"]');
     
     const quantityInput = document.getElementById('quantity-input');
     const quantity = parseFloat(quantityInput.value);
@@ -1840,7 +1876,7 @@ async function handleQuantitySubmit(e) {
     }
     
     try {
-        showLoading();
+        showLoading(submitButton);
         
         const response = await axios.post('/cart', {
             product_id: productId,
@@ -1851,11 +1887,11 @@ async function handleQuantitySubmit(e) {
         closeQuantityModal();
         showSuccessMessage(`${pendingAddToCart.productName} (${quantity} kg) added to cart!`);
         await loadCart(); // Refresh cart to update badge
-        hideLoading();
+        hideLoading(submitButton);
     } catch (error) {
         console.error('Add to cart error:', error);
         console.error('Error response:', error.response?.data);
-        hideLoading();
+        hideLoading(submitButton);
         if (error.response) {
             const data = error.response.data;
             if (error.response.status === 401) {
@@ -2064,6 +2100,7 @@ function closeCheckoutModal() {
 
 async function handleCheckout(e) {
     e.preventDefault();
+    const submitButton = e.target.querySelector('button[type="submit"]');
     
     const address = document.getElementById('shipping-address').value.trim();
     const city = document.getElementById('shipping-city').value.trim();
@@ -2079,7 +2116,7 @@ async function handleCheckout(e) {
     }
     
     try {
-        showLoading();
+        showLoading(submitButton);
         const response = await axios.post('/orders/checkout', {
             shipping_address: address,
             shipping_city: city,
@@ -2094,10 +2131,10 @@ async function handleCheckout(e) {
         closeCheckoutModal();
         await loadCart(); // Refresh cart (should be empty now)
         await loadVegetables(); // Refresh vegetables to show updated stock
-        hideLoading();
+        hideLoading(submitButton);
     } catch (error) {
         console.error('Checkout error:', error);
-        hideLoading();
+        hideLoading(submitButton);
         if (error.response) {
             const data = error.response.data;
             if (error.response.status === 401) {
