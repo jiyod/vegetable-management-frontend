@@ -37,13 +37,19 @@ const cancelBtn = document.getElementById('cancel-btn');
 const vegetablesList = document.getElementById('vegetables-list');
 
 // API base URL - Automatically detects environment
-// Works on both GitHub Pages and Hostinger backend server
+// Works on GitHub Pages, Hostinger backend server, and Cordova app
 const getApiBase = () => {
     // Check if API URL is set via data attribute (for manual override)
     const container = document.querySelector('.container') || document.body;
     const dataApiUrl = container.getAttribute('data-api-url');
     if (dataApiUrl) {
         return dataApiUrl;
+    }
+    
+    // Check if running in Cordova app
+    // Cordova apps use file:// protocol or have window.cordova defined
+    if (window.cordova || window.location.protocol === 'file:' || window.location.protocol === 'app:') {
+        return 'https://vegetable.bytevortexz.com/api';
     }
     
     const hostname = window.location.hostname;
@@ -507,9 +513,9 @@ async function handleProfileImageUpload(event) {
     
     console.log('✅ File selected:', file.name, file.type, file.size);
     
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-        showErrorMessage('Image size must be less than 5MB');
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+        showErrorMessage('Image size must be less than 10MB');
         event.target.value = '';
         return;
     }
