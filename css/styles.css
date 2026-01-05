@@ -308,35 +308,6 @@ header h1 {
     animation: spin 1s ease-in-out infinite;
 }
 
-/* Button Loading Spinner */
-.btn .spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 0.8s linear infinite;
-    vertical-align: middle;
-    margin-right: 8px;
-}
-
-.btn-secondary .spinner,
-.btn-danger .spinner {
-    border: 2px solid rgba(74, 85, 104, 0.3);
-    border-top-color: #4a5568;
-}
-
-.btn.loading-state {
-    opacity: 0.7;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-.btn.loading-state .loading-text {
-    vertical-align: middle;
-}
-
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -470,30 +441,184 @@ header h1 {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+        padding: 15px;
+    }
+    
+    header h1 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+    
+    .user-info {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .user-info .btn {
+        font-size: 12px;
+        padding: 10px 16px;
+        min-width: auto;
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+    
+    .user-info span {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 5px;
     }
     
     .auth-container {
         padding: 20px;
         margin: 10px;
+        max-width: 100%;
     }
     
     .section-header {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+        align-items: stretch;
+    }
+    
+    .section-header > div {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .section-header select,
+    .section-header input,
+    .section-header button {
+        width: 100%;
+        margin-bottom: 0;
     }
     
     .vegetables-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .vegetable-card {
+        padding: 15px;
+    }
+    
+    .vegetable-card h3 {
+        font-size: 1.2rem;
+    }
+    
+    .vegetable-card .price {
+        font-size: 1.1rem;
     }
     
     .modal-content {
-        margin: 20px;
+        margin: 10px;
         padding: 20px;
+        max-width: calc(100% - 20px);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
     }
     
     .form-actions {
         flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-actions button {
+        width: 100%;
+        margin-bottom: 0;
+    }
+    
+    .btn {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    
+    header {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .user-info {
+        gap: 6px;
+    }
+    
+    .user-info .btn {
+        font-size: 11px;
+        padding: 8px 12px;
+        min-width: 80px;
+    }
+    
+    .auth-container {
+        padding: 15px;
+        margin: 5px;
+    }
+    
+    .vegetable-section {
+        padding: 15px;
+    }
+    
+    .section-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .vegetable-card {
+        padding: 12px;
+    }
+    
+    .vegetable-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .vegetable-card .price {
+        font-size: 1rem;
+    }
+    
+    .vegetable-image {
+        height: 180px;
+    }
+    
+    .modal-content {
+        margin: 5px;
+        padding: 15px;
+        max-width: calc(100% - 10px);
+    }
+    
+    .btn {
+        font-size: 13px;
+        padding: 10px 16px;
+    }
+}
+
+/* Fix for cart badge positioning on mobile */
+#cart-count-badge {
+    font-size: 11px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+}
+
+@media (max-width: 480px) {
+    #cart-count-badge {
+        font-size: 10px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
     }
 }
 
