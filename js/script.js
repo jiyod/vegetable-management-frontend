@@ -210,15 +210,27 @@ function setupEventListeners() {
     }
 
     // Admin section event listeners
+    const viewUsersBtn = document.getElementById('view-users-btn');
     const viewSellersBtn = document.getElementById('view-sellers-btn');
     const viewVegetablesBtn = document.getElementById('view-vegetables-btn');
     const sellerSearch = document.getElementById('seller-search');
     const sellerStatusFilter = document.getElementById('seller-status-filter');
+    const userSearch = document.getElementById('user-search');
+    const userRoleFilter = document.getElementById('user-role-filter');
+
+    if (viewUsersBtn) {
+        viewUsersBtn.addEventListener('click', () => {
+            loadUsers();
+            document.getElementById('users-section').style.display = 'block';
+            document.getElementById('sellers-section').style.display = 'none';
+        });
+    }
 
     if (viewSellersBtn) {
         viewSellersBtn.addEventListener('click', () => {
             loadSellers();
             document.getElementById('sellers-section').style.display = 'block';
+            document.getElementById('users-section').style.display = 'none';
         });
     }
 
@@ -325,6 +337,19 @@ function setupEventListeners() {
 
     if (sellerStatusFilter) {
         sellerStatusFilter.addEventListener('change', loadSellers);
+    }
+
+    // User search and filter
+    if (userSearch) {
+        userSearch.addEventListener('input', debounce(() => {
+            loadUsers();
+        }, 500));
+    }
+
+    if (userRoleFilter) {
+        userRoleFilter.addEventListener('change', () => {
+            loadUsers();
+        });
     }
 
     // Forgot password (OTP-based)
@@ -441,12 +466,11 @@ async function handleRegister(e) {
     const name = document.getElementById('register-name').value;
     const username = document.getElementById('register-username').value;
     const email = document.getElementById('register-email').value;
-    const gmail = document.getElementById('register-gmail').value;
     const password = document.getElementById('register-password').value;
     const role = document.querySelector('input[name="register-role"]:checked')?.value || 'customer';
 
     try {
-        const response = await axios.post('/register', { name, username, email, gmail, password, role });
+        const response = await axios.post('/register', { name, username, email, password, role });
         const data = response.data;
 
         let message = data.message || 'Registration successful! Please check your email and click the verification link to complete your registration.';
@@ -645,19 +669,19 @@ async function handleForgotPasswordRequest(e) {
     showLoading();
 
     const username = document.getElementById('forgot-username').value.trim();
-    const gmail = document.getElementById('forgot-gmail').value.trim();
+    const email = document.getElementById('forgot-email').value.trim();
 
     try {
-        const response = await axios.post('/forgot-password/request', { username, gmail });
+        const response = await axios.post('/forgot-password/request', { username, email });
         const data = response.data;
 
-        showSuccessMessage(data.message || 'A 6-digit code has been sent to your Gmail.');
+        showSuccessMessage(data.message || 'A 6-digit code has been sent to your email.');
 
         // Pre-fill reset form
         const resetUsername = document.getElementById('forgot-reset-username');
-        const resetGmail = document.getElementById('forgot-reset-gmail');
+        const resetEmail = document.getElementById('forgot-reset-email');
         if (resetUsername) resetUsername.value = username;
-        if (resetGmail) resetGmail.value = gmail;
+        if (resetEmail) resetEmail.value = email;
 
         // Show reset step
         if (forgotStepRequest && forgotStepReset) {
@@ -682,7 +706,7 @@ async function handleForgotPasswordReset(e) {
     showLoading();
 
     const username = document.getElementById('forgot-reset-username').value.trim();
-    const gmail = document.getElementById('forgot-reset-gmail').value.trim();
+    const email = document.getElementById('forgot-reset-email').value.trim();
     const otp = document.getElementById('forgot-otp').value.trim();
     const password = document.getElementById('forgot-new-password').value;
     const passwordConfirm = document.getElementById('forgot-new-password-confirm').value;
@@ -696,7 +720,7 @@ async function handleForgotPasswordReset(e) {
     try {
         const response = await axios.post('/forgot-password/reset', {
             username,
-            gmail,
+            email,
             otp,
             password,
             password_confirmation: passwordConfirm,
@@ -720,6 +744,9 @@ async function handleForgotPasswordReset(e) {
 
 // Make functions available globally
 window.closeProfileModal = closeProfileModal;
+window.viewOrderDetails = viewOrderDetails;
+window.updateOrderItemStatus = updateOrderItemStatus;
+window.cancelOrder = cancelOrder;
 
 async function checkAuthStatus() {
     try {
@@ -838,7 +865,6 @@ function displaySellers(sellers) {
             </div>
             <div style="margin-bottom: 15px;">
                 <p style="margin: 5px 0; color: #374151;"><strong>Email:</strong> ${seller.email}</p>
-                <p style="margin: 5px 0; color: #374151;"><strong>Gmail:</strong> ${seller.gmail || 'N/A'}</p>
                 <p style="margin: 5px 0; color: #374151;"><strong>Email Verified:</strong> ${seller.email_verified ? '✓ Yes' : '✗ No'}</p>
             </div>
             <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -995,10 +1021,178 @@ async function loadSellersForFilter() {
     }
 }
 
+// User Management Functions
+async function loadUsers() {
+    try {
+        const search = document.getElementById('user-search')?.value || '';
+        const role = document.getElementById('user-role-filter')?.value || '';
+        
+        let url = '/admin/users?per_page=50';
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (role) url += `&role=${encodeURIComponent(role)}`;
+
+        const response = await axios.get(url);
+        const users = response.data.data || response.data || [];
+        displayUsers(users);
+    } catch (error) {
+        console.error('Load users error:', error);
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            handleInvalidToken();
+        } else {
+            showErrorMessage('Failed to load users');
+        }
+    }
+}
+
+function displayUsers(users) {
+    const usersList = document.getElementById('users-list');
+    if (!usersList) return;
+    
+    usersList.innerHTML = '';
+
+    if (users.length === 0) {
+        usersList.innerHTML = '<p style="text-align: center; color: #718096; padding: 20px;">No users found.</p>';
+        return;
+    }
+
+    users.forEach(user => {
+        const card = document.createElement('div');
+        card.className = 'vegetable-card';
+        card.style.maxWidth = '100%';
+        
+        const roleColors = {
+            'admin': '#8b5cf6',
+            'seller': '#3b82f6',
+            'customer': '#10b981'
+        };
+        
+        const roleColor = roleColors[user.role] || '#6b7280';
+        const roleBadge = `<span style="display: inline-block; padding: 4px 12px; background: ${roleColor}; color: white; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: capitalize;">${user.role}</span>`;
+        
+        const sellerStatusBadge = user.role === 'seller' && user.seller_status
+            ? `<span style="display: inline-block; margin-left: 8px; padding: 4px 12px; background: ${user.seller_status === 'approved' ? '#10b981' : user.seller_status === 'pending' ? '#f59e0b' : '#ef4444'}; color: white; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: capitalize;">${user.seller_status}</span>`
+            : '';
+
+        // Don't show role change for current user
+        const isCurrentUser = currentUser && currentUser.id === user.id;
+        const roleOptions = ['customer', 'seller', 'admin'].map(role => 
+            `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
+        ).join('');
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin: 0 0 5px 0;">${user.name}</h3>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px;">@${user.username}</p>
+                </div>
+                <div>
+                    ${roleBadge}
+                    ${sellerStatusBadge}
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <p style="margin: 5px 0; color: #374151;"><strong>Email:</strong> ${user.email}</p>
+                <p style="margin: 5px 0; color: #374151;"><strong>Email Verified:</strong> ${user.email_verified ? '✓ Yes' : '✗ No'}</p>
+                <p style="margin: 5px 0; color: #374151;"><strong>User ID:</strong> ${user.id}</p>
+                <p style="margin: 5px 0; color: #374151;"><strong>Joined:</strong> ${new Date(user.created_at).toLocaleDateString()}</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
+                    <span style="color: #374151; font-weight: 500;">Change Role:</span>
+                    <select id="role-select-${user.id}" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;" ${isCurrentUser ? 'disabled' : ''}>
+                        ${roleOptions}
+                    </select>
+                </label>
+                ${!isCurrentUser ? `
+                    <button class="btn btn-primary" onclick="updateUserRole(${user.id})" style="min-width: 120px;">Update Role</button>
+                ` : `
+                    <span style="color: #6b7280; font-size: 12px; font-style: italic;">(Cannot change your own role)</span>
+                `}
+            </div>
+        `;
+        
+        usersList.appendChild(card);
+    });
+}
+
+async function updateUserRole(userId) {
+    const roleSelect = document.getElementById(`role-select-${userId}`);
+    if (!roleSelect) return;
+    
+    const newRole = roleSelect.value;
+    const userCard = roleSelect.closest('.vegetable-card');
+    const userName = userCard ? userCard.querySelector('h3')?.textContent : 'User';
+    
+    // Special confirmation for admin role
+    if (newRole === 'admin') {
+        showConfirmDialog(
+            'Promote to Admin',
+            `Are you sure you want to promote "${userName}" to Admin? This will give them full administrative access to the system.`,
+            async () => {
+                try {
+                    showLoading();
+                    await axios.put(`/admin/users/${userId}/role`, { role: newRole });
+                    showSuccessMessage(`User role updated to ${newRole} successfully!`);
+                    await loadUsers(); // Refresh users list
+                    hideLoading();
+                } catch (error) {
+                    console.error('Update user role error:', error);
+                    hideLoading();
+                    if (error.response) {
+                        const data = error.response.data;
+                        if (error.response.status === 401) {
+                            handleInvalidToken();
+                        } else {
+                            showErrorMessage(data.error?.description || 'Failed to update user role');
+                        }
+                    } else {
+                        showErrorMessage('Network error. Please try again.');
+                    }
+                }
+            },
+            'Promote to Admin',
+            'Cancel',
+            true
+        );
+    } else {
+        // Regular confirmation for other role changes
+        showConfirmDialog(
+            'Change User Role',
+            `Are you sure you want to change "${userName}" role to ${newRole}?`,
+            async () => {
+                try {
+                    showLoading();
+                    await axios.put(`/admin/users/${userId}/role`, { role: newRole });
+                    showSuccessMessage(`User role updated to ${newRole} successfully!`);
+                    await loadUsers(); // Refresh users list
+                    hideLoading();
+                } catch (error) {
+                    console.error('Update user role error:', error);
+                    hideLoading();
+                    if (error.response) {
+                        const data = error.response.data;
+                        if (error.response.status === 401) {
+                            handleInvalidToken();
+                        } else {
+                            showErrorMessage(data.error?.description || 'Failed to update user role');
+                        }
+                    } else {
+                        showErrorMessage('Network error. Please try again.');
+                    }
+                }
+            },
+            'Change Role',
+            'Cancel',
+            true
+        );
+    }
+}
+
 // Make functions available globally
 window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
 window.suspendSeller = suspendSeller;
+window.updateUserRole = updateUserRole;
 
 // UI functions
 function showAuthSection() {
@@ -1145,9 +1339,11 @@ function showAdminSection() {
     if (adminSection) {
         adminSection.classList.remove('hidden');
         adminSection.style.display = 'block';
-        // Make sure sellers section is visible by default
+        // Make sure users section is visible by default
+        const usersSection = document.getElementById('users-section');
         const sellersSection = document.getElementById('sellers-section');
-        if (sellersSection) sellersSection.style.display = 'block';
+        if (usersSection) usersSection.style.display = 'block';
+        if (sellersSection) sellersSection.style.display = 'none';
     }
     // Show user info
     if (userInfo) userInfo.classList.remove('hidden');
@@ -1169,8 +1365,12 @@ function showAdminSection() {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
     }
     
-    // Load sellers by default
-    loadSellers();
+    // Load users by default (show users section)
+    loadUsers();
+    const usersSection = document.getElementById('users-section');
+    const sellersSection = document.getElementById('sellers-section');
+    if (usersSection) usersSection.style.display = 'block';
+    if (sellersSection) sellersSection.style.display = 'none';
 }
 
 function showLoading() {
@@ -2093,11 +2293,75 @@ function openCheckoutModal() {
         if (countryInput) countryInput.value = 'Philippines';
         if (paymentMethod) paymentMethod.value = 'cash_on_delivery';
         
+        // Load saved address from localStorage
+        loadSavedAddress();
+        
         checkoutModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
         closeCartModal(); // Close cart modal
     }
 }
+
+// Load saved address from localStorage and pre-fill the form
+function loadSavedAddress() {
+    try {
+        const savedAddressData = localStorage.getItem('lastShippingAddress');
+        const savedAddressNotice = document.getElementById('saved-address-notice');
+        
+        if (savedAddressData) {
+            const savedAddress = JSON.parse(savedAddressData);
+            const barangayInput = document.getElementById('shipping-barangay');
+            const addressInput = document.getElementById('shipping-address');
+            const notesInput = document.getElementById('order-notes');
+            
+            let hasSavedData = false;
+            
+            if (barangayInput && savedAddress.barangay) {
+                barangayInput.value = savedAddress.barangay;
+                hasSavedData = true;
+            }
+            if (addressInput && savedAddress.address) {
+                addressInput.value = savedAddress.address;
+                hasSavedData = true;
+            }
+            if (notesInput && savedAddress.notes) {
+                notesInput.value = savedAddress.notes;
+            }
+            
+            // Show notice if we loaded saved data
+            if (hasSavedData && savedAddressNotice) {
+                savedAddressNotice.style.display = 'block';
+            } else if (savedAddressNotice) {
+                savedAddressNotice.style.display = 'none';
+            }
+        } else if (savedAddressNotice) {
+            savedAddressNotice.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading saved address:', error);
+        const savedAddressNotice = document.getElementById('saved-address-notice');
+        if (savedAddressNotice) savedAddressNotice.style.display = 'none';
+    }
+}
+
+// Clear saved address
+function clearSavedAddress() {
+    localStorage.removeItem('lastShippingAddress');
+    const savedAddressNotice = document.getElementById('saved-address-notice');
+    if (savedAddressNotice) savedAddressNotice.style.display = 'none';
+    
+    // Clear the form fields
+    const barangayInput = document.getElementById('shipping-barangay');
+    const addressInput = document.getElementById('shipping-address');
+    const notesInput = document.getElementById('order-notes');
+    
+    if (barangayInput) barangayInput.value = '';
+    if (addressInput) addressInput.value = '';
+    if (notesInput) notesInput.value = '';
+}
+
+// Make function available globally
+window.clearSavedAddress = clearSavedAddress;
 
 function closeCheckoutModal() {
     const checkoutModal = document.getElementById('checkout-modal');
@@ -2246,7 +2510,21 @@ async function handleCheckout(e) {
             notes: notes || null
         });
         
-        showSuccessMessage('Order placed successfully!');
+        // Save address to localStorage for future orders
+        const savedAddress = {
+            barangay: barangay,
+            address: address,
+            notes: notes || ''
+        };
+        localStorage.setItem('lastShippingAddress', JSON.stringify(savedAddress));
+        
+        const data = response.data;
+        const ordersCount = data.orders ? data.orders.length : 1;
+        const message = ordersCount > 1 
+            ? `${ordersCount} orders placed successfully (separated by seller)!`
+            : data.message || 'Order placed successfully!';
+        
+        showSuccessMessage(message);
         closeCheckoutModal();
         await loadCart(); // Refresh cart (should be empty now)
         await loadVegetables(); // Refresh vegetables to show updated stock
@@ -2309,6 +2587,7 @@ function displayOrders(orders) {
         
         const statusColors = {
             'pending': '#f59e0b',
+            'approved': '#3b82f6',
             'confirmed': '#3b82f6',
             'processing': '#8b5cf6',
             'shipped': '#6366f1',
@@ -2382,6 +2661,7 @@ function displayOrderDetails(order) {
     
     const statusColors = {
         'pending': '#f59e0b',
+        'approved': '#3b82f6',
         'confirmed': '#3b82f6',
         'processing': '#8b5cf6',
         'shipped': '#6366f1',
@@ -2392,24 +2672,46 @@ function displayOrderDetails(order) {
     
     const statusColor = statusColors[order.status] || '#6b7280';
     
-    const itemsHtml = order.items ? order.items.map(item => {
+    // Get seller info (all items in order are from the same seller now)
+    const seller = order.items && order.items.length > 0 && order.items[0].seller 
+        ? order.items[0].seller 
+        : null;
+    const sellerName = seller ? (seller.name || seller.username) : 'Unknown Seller';
+    const hasPending = order.items && order.items.some(item => item.status === 'pending');
+    
+    // Generate HTML for items (all from same seller)
+    const itemsHtml = order.items && order.items.length > 0 ? order.items.map(item => {
         const product = item.product || {};
+        const itemStatusColor = statusColors[item.status] || '#6b7280';
         return `
-            <div style="display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #e2e8f0; gap: 15px;">
-                <img src="${product.image || '/images/default-vegetable.svg'}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+            <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; gap: 15px; background: #fafafa;">
+                <img src="${product.image || '/images/default-vegetable.svg'}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px;">
                 <div style="flex: 1;">
-                    <h4 style="margin: 0 0 5px; color: #1a202c;">${product.name || 'Product'}</h4>
-                    <p style="margin: 0; color: #718096; font-size: 14px;">₱${parseFloat(item.price || 0).toFixed(2)} /kg</p>
-                    ${item.seller ? `<p style="margin: 5px 0 0; color: #718096; font-size: 12px;">Seller: ${item.seller.name || item.seller.username}</p>` : ''}
+                    <h4 style="margin: 0 0 5px; color: #1a202c; font-size: 14px;">${product.name || 'Product'}</h4>
+                    <p style="margin: 0; color: #718096; font-size: 12px;">₱${parseFloat(item.price || 0).toFixed(2)} /kg × ${parseFloat(item.quantity || 0).toFixed(2)} kg</p>
                 </div>
                 <div style="text-align: right;">
-                    <p style="margin: 0; color: #4a5568; font-size: 14px;">${parseFloat(item.quantity || 0).toFixed(2)} kg</p>
-                    <p style="margin: 5px 0 0; color: #667eea; font-weight: 600;">₱${parseFloat(item.subtotal || 0).toFixed(2)}</p>
-                    <span style="display: inline-block; margin-top: 5px; padding: 4px 8px; background: ${statusColors[item.status] || '#6b7280'}; color: white; border-radius: 4px; font-size: 11px; text-transform: capitalize;">${item.status || 'pending'}</span>
+                    <p style="margin: 0; color: #667eea; font-weight: 600; font-size: 14px;">₱${parseFloat(item.subtotal || 0).toFixed(2)}</p>
+                    <span style="display: inline-block; margin-top: 5px; padding: 3px 8px; background: ${itemStatusColor}; color: white; border-radius: 4px; font-size: 10px; text-transform: capitalize;">${item.status || 'pending'}</span>
                 </div>
             </div>
         `;
     }).join('') : '<p style="text-align: center; color: #718096; padding: 20px;">No items found.</p>';
+    
+    // Seller header section
+    const sellerHeader = seller ? `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px; border-radius: 8px; margin-bottom: 15px; color: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin: 0 0 5px; font-size: 16px; font-weight: 600;">Seller: ${sellerName}</h4>
+                    <p style="margin: 0; font-size: 12px; opacity: 0.9;">${order.items ? order.items.length : 0} item(s)</p>
+                </div>
+                <div style="text-align: right;">
+                    ${hasPending ? `<p style="margin: 0; font-size: 11px; opacity: 0.9;">⏳ Awaiting Approval</p>` : ''}
+                </div>
+            </div>
+        </div>
+    ` : '';
     
     container.innerHTML = `
         <div style="margin-bottom: 20px;">
@@ -2433,6 +2735,7 @@ function displayOrderDetails(order) {
         
         <div style="margin-bottom: 20px;">
             <h5 style="margin: 0 0 15px; color: #1a202c;">Order Items</h5>
+            ${sellerHeader}
             <div style="background: white; border-radius: 8px; overflow: hidden;">
                 ${itemsHtml}
             </div>
@@ -2599,12 +2902,52 @@ function displaySellerOrders(orders) {
         const itemsHtml = sellerItems.map(item => {
             const statusColors = {
                 'pending': '#f59e0b',
-                'processing': '#3b82f6',
-                'shipped': '#8b5cf6',
+                'approved': '#3b82f6',
+                'processing': '#8b5cf6',
+                'shipped': '#6366f1',
                 'delivered': '#10b981',
                 'cancelled': '#ef4444'
             };
             const statusColor = statusColors[item.status] || '#718096';
+            
+            // Determine which buttons to show based on status
+            let actionButtons = '';
+            if (item.status === 'pending') {
+                actionButtons = `
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'approved', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-success" style="padding: 8px 16px; font-size: 12px; flex: 1;">
+                            ✓ Approve Order
+                        </button>
+                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'cancelled', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-danger" style="padding: 8px 16px; font-size: 12px; flex: 1;">
+                            ✗ Reject
+                        </button>
+                    </div>
+                `;
+            } else if (item.status === 'approved') {
+                actionButtons = `
+                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'processing', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; flex: 1;">
+                            Start Processing
+                        </button>
+                    </div>
+                `;
+            } else if (item.status === 'processing') {
+                actionButtons = `
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'shipped', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; flex: 1;">
+                            Mark as Shipped
+                        </button>
+                    </div>
+                `;
+            } else if (item.status === 'shipped') {
+                actionButtons = `
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'delivered', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-success" style="padding: 8px 16px; font-size: 12px; flex: 1;">
+                            Mark as Delivered
+                        </button>
+                    </div>
+                `;
+            }
             
             return `
                 <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${statusColor};">
@@ -2613,11 +2956,7 @@ function displaySellerOrders(orders) {
                             <h4 style="margin: 0 0 8px 0; color: #1a202c; font-size: 16px;">${item.product ? item.product.name : 'Unknown Product'}</h4>
                             <p style="margin: 4px 0; color: #718096; font-size: 14px;">Quantity: <strong>${parseFloat(item.quantity).toFixed(2)} kg</strong></p>
                             <p style="margin: 4px 0; color: #718096; font-size: 14px;">Price: ₱${parseFloat(item.price).toFixed(2)} per kg</p>
-                            ${item.status === 'pending' ? `
-                                <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'delivered', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; margin-top: 8px;">
-                                    Mark as Delivered
-                                </button>
-                            ` : ''}
+                            ${actionButtons}
                             <p style="margin: 8px 0 0 0; color: #1a202c; font-weight: 600; font-size: 15px;">Subtotal: ₱${parseFloat(item.subtotal).toFixed(2)}</p>
                         </div>
                         <div style="text-align: right; min-width: 150px;">

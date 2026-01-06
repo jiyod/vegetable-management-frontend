@@ -66,10 +66,7 @@
                         <div class="form-group">
                             <label for="register-email">Email:</label>
                             <input type="email" id="register-email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-gmail">Gmail (for password reset):</label>
-                            <input type="email" id="register-gmail" required>
+                            <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">This email will be used for account verification and password reset</small>
                         </div>
                         <div class="form-group">
                             <label for="register-password">Password:</label>
@@ -106,8 +103,8 @@
                 <!-- Step 1: Request OTP -->
                 <div id="forgot-step-request">
                     <p style="font-size: 14px; color: #4a5568; margin-bottom: 10px;">
-                        Enter your <strong>username</strong> and the <strong>Gmail</strong> you used during registration.
-                        We will send a 6-digit code to that Gmail address.
+                        Enter your <strong>username</strong> and the <strong>email</strong> you used during registration.
+                        We will send a 6-digit code to that email address.
                     </p>
                     <form id="forgot-password-request-form">
                         <div class="form-group">
@@ -115,8 +112,8 @@
                             <input type="text" id="forgot-username" required>
                         </div>
                         <div class="form-group">
-                            <label for="forgot-gmail">Gmail</label>
-                            <input type="email" id="forgot-gmail" required>
+                            <label for="forgot-email">Email</label>
+                            <input type="email" id="forgot-email" required>
                         </div>
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Send Code</button>
                     </form>
@@ -125,7 +122,7 @@
                 <!-- Step 2: Reset password with OTP -->
                 <div id="forgot-step-reset" class="hidden">
                     <p style="font-size: 14px; color: #4a5568; margin-bottom: 10px;">
-                        We sent a 6-digit code to your Gmail. Enter the code and your new password below.
+                        We sent a 6-digit code to your email. Enter the code and your new password below.
                     </p>
                     <form id="forgot-password-reset-form">
                         <div class="form-group">
@@ -133,8 +130,8 @@
                             <input type="text" id="forgot-reset-username" required>
                         </div>
                         <div class="form-group">
-                            <label for="forgot-reset-gmail">Gmail</label>
-                            <input type="email" id="forgot-reset-gmail" required>
+                            <label for="forgot-reset-email">Email</label>
+                            <input type="email" id="forgot-reset-email" required>
                         </div>
                         <div class="form-group">
                             <label for="forgot-otp">6-digit Code</label>
@@ -201,8 +198,28 @@
             <div class="section-header">
                 <h2>Admin Dashboard</h2>
                 <div style="display: flex; gap: 10px;">
-                    <button id="view-sellers-btn" class="btn btn-primary">View All Sellers</button>
+                    <button id="view-users-btn" class="btn btn-primary">Manage Users</button>
+                    <button id="view-sellers-btn" class="btn btn-secondary">View All Sellers</button>
                     <button id="view-vegetables-btn" class="btn btn-secondary">View Vegetables</button>
+                </div>
+            </div>
+
+            <!-- Users Management Section -->
+            <div id="users-section" class="sellers-section" style="display: none;">
+                <div class="section-header" style="margin-top: 20px;">
+                    <h3>User Management</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="user-search" placeholder="Search users by name, username, or email..." style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1; max-width: 400px;">
+                        <select id="user-role-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                            <option value="">All Roles</option>
+                            <option value="customer">Customers</option>
+                            <option value="seller">Sellers</option>
+                            <option value="admin">Admins</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="users-list" class="sellers-list">
+                    <!-- Users will be loaded here -->
                 </div>
             </div>
 
@@ -374,6 +391,15 @@
                 <span class="close" onclick="closeCheckoutModal()" style="cursor: pointer; z-index: 100002; position: absolute; top: 15px; right: 20px;">&times;</span>
                 <h3 style="text-align: center; margin-bottom: 20px;">Checkout</h3>
                 <form id="checkout-form">
+                    <div id="saved-address-notice" style="display: none; background: #e0e7ff; border: 1px solid #667eea; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 16px;">📋</span>
+                                <span style="color: #1e40af; font-size: 13px; font-weight: 500;">Using your last saved address</span>
+                            </div>
+                            <button type="button" onclick="clearSavedAddress()" style="background: transparent; border: none; color: #667eea; cursor: pointer; font-size: 12px; text-decoration: underline; padding: 4px 8px;">Clear</button>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label for="shipping-barangay">Barangay *</label>
                         <div style="position: relative;">
