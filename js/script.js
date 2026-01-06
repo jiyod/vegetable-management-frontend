@@ -1153,6 +1153,17 @@ function showAdminSection() {
     if (userInfo) userInfo.classList.remove('hidden');
     if (userName) userName.textContent = currentUser?.name || 'Admin';
     
+    // Hide customer-specific buttons for admin
+    const cartBtn = document.getElementById('cart-btn');
+    const ordersBtn = document.getElementById('orders-btn');
+    const browseSellersBtn = document.getElementById('browse-sellers-btn');
+    const viewAllProductsBtn = document.getElementById('view-all-products-btn');
+    
+    if (cartBtn) cartBtn.style.display = 'none';
+    if (ordersBtn) ordersBtn.style.display = 'none';
+    if (browseSellersBtn) browseSellersBtn.style.display = 'none';
+    if (viewAllProductsBtn) viewAllProductsBtn.style.display = 'none';
+    
     // Update localStorage with current user info
     if (currentUser) {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
