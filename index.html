@@ -293,7 +293,7 @@
                         <div class="form-group">
                             <label for="vegetable-image">Image:</label>
                             <input type="file" id="vegetable-image" accept="image/*">
-                            <small>Upload an image (JPG, PNG, GIF) - Max 50MB</small>
+                            <small>Upload an image (JPG, PNG, GIF) - Max 5MB</small>
                         </div>
                         <div class="form-actions" style="justify-content: center; gap: 15px; margin-top: 25px;">
                             <button type="button" id="cancel-btn" class="btn btn-secondary" style="min-width: 120px;">Cancel</button>
@@ -375,33 +375,37 @@
                 <h3 style="text-align: center; margin-bottom: 20px;">Checkout</h3>
                 <form id="checkout-form">
                     <div class="form-group">
-                        <label for="shipping-address">Delivery Address *</label>
-                        <textarea id="shipping-address" required placeholder="Enter your complete delivery address"></textarea>
+                        <label for="shipping-barangay">Barangay *</label>
+                        <div style="position: relative;">
+                            <input type="text" id="shipping-barangay" required placeholder="Type to search barangay..." autocomplete="off" style="width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px;">
+                            <div id="barangay-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #e2e8f0; border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 1000; margin-top: 5px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                                <!-- Barangay options will be populated here -->
+                            </div>
+                        </div>
+                        <small style="color: #718096; font-size: 12px;">Start typing to filter barangays</small>
                     </div>
                     <div class="form-group">
-                        <label for="shipping-city">City *</label>
-                        <input type="text" id="shipping-city" required placeholder="e.g., Manila">
+                        <label for="shipping-address">Street Address / House Number *</label>
+                        <textarea id="shipping-address" required placeholder="Enter your street address, house number, or landmark"></textarea>
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <input type="hidden" id="shipping-city" value="Sinacaban">
+                        <input type="hidden" id="shipping-state" value="Misamis Occidental">
+                        <input type="hidden" id="shipping-country" value="Philippines">
                     </div>
                     <div class="form-group">
-                        <label for="shipping-state">State/Province</label>
-                        <input type="text" id="shipping-state" placeholder="e.g., Metro Manila">
-                    </div>
-                    <div class="form-group">
-                        <label for="shipping-postal-code">Postal Code</label>
-                        <input type="text" id="shipping-postal-code" placeholder="e.g., 1000">
-                    </div>
-                    <div class="form-group">
-                        <label for="shipping-country">Country</label>
-                        <input type="text" id="shipping-country" value="Philippines" placeholder="Philippines">
+                        <label>Location</label>
+                        <div style="background: #f7fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <p style="margin: 0; color: #4a5568; font-size: 14px;"><strong>Municipality:</strong> Sinacaban</p>
+                            <p style="margin: 0; color: #4a5568; font-size: 14px;"><strong>Province:</strong> Misamis Occidental</p>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="payment-method">Payment Method</label>
-                        <select id="payment-method" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
-                            <option value="cash_on_delivery">Cash on Delivery</option>
-                            <option value="gcash">GCash</option>
-                            <option value="paymaya">PayMaya</option>
-                            <option value="bank_transfer">Bank Transfer</option>
+                        <select id="payment-method" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;" disabled>
+                            <option value="cash_on_delivery" selected>Cash on Delivery (COD) - Only Available Payment Method</option>
                         </select>
+                        <small style="color: #718096; font-size: 12px;">Currently, we only accept Cash on Delivery for orders within Sinacaban</small>
                     </div>
                     <div class="form-group">
                         <label for="order-notes">Order Notes (Optional)</label>
