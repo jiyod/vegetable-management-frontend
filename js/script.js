@@ -3,6 +3,28 @@ let currentUser = null;
 let authToken = localStorage.getItem('authToken');
 let editingVegetableId = null;
 
+// Sinacaban barangays list
+const SINACABAN_BARANGAYS = [
+    'Bliss Project',
+    'Cagay-anon',
+    'Camanse',
+    'Colupan Alto',
+    'Colupan Bajo',
+    'Dinas',
+    'Estrella',
+    'Katipunan',
+    'Libertad Alto',
+    'Libertad Bajo',
+    'Poblacion',
+    'San Isidro Alto',
+    'San Isidro Bajo',
+    'San Lorenzo Ruiz (Sungan)',
+    'San Vicente',
+    'Señor',
+    'Sinonoc',
+    'Tipan'
+];
+
 // DOM elements
 const authSection = document.getElementById('auth-section');
 const vegetableSection = document.getElementById('vegetable-section');
@@ -37,19 +59,13 @@ const cancelBtn = document.getElementById('cancel-btn');
 const vegetablesList = document.getElementById('vegetables-list');
 
 // API base URL - Automatically detects environment
-// Works on GitHub Pages, Hostinger backend server, and Cordova app
+// Works on both GitHub Pages and Hostinger backend server
 const getApiBase = () => {
     // Check if API URL is set via data attribute (for manual override)
     const container = document.querySelector('.container') || document.body;
     const dataApiUrl = container.getAttribute('data-api-url');
     if (dataApiUrl) {
         return dataApiUrl;
-    }
-    
-    // Check if running in Cordova app
-    // Cordova apps use file:// protocol or have window.cordova defined
-    if (window.cordova || window.location.protocol === 'file:' || window.location.protocol === 'app:') {
-        return 'https://vegetable.bytevortexz.com/api';
     }
     
     const hostname = window.location.hostname;
@@ -283,6 +299,10 @@ function setupEventListeners() {
             checkoutForm.addEventListener('submit', handleCheckout);
         }
         
+        // Barangay dropdown functionality
+        setupBarangayDropdown();
+        }
+        
         // Quantity modal close button
         const quantityModal = document.getElementById('quantity-modal');
         if (quantityModal) {
@@ -375,8 +395,7 @@ function switchTab(tab) {
 // Authentication functions
 async function handleLogin(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    showLoading(submitButton);
+    showLoading();
 
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
@@ -412,14 +431,13 @@ async function handleLogin(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading(submitButton);
+        hideLoading();
     }
 }
 
 async function handleRegister(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    showLoading(submitButton);
+    showLoading();
 
     const name = document.getElementById('register-name').value;
     const username = document.getElementById('register-username').value;
@@ -453,7 +471,7 @@ async function handleRegister(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading(submitButton);
+        hideLoading();
     }
 }
 
@@ -513,9 +531,9 @@ async function handleProfileImageUpload(event) {
     
     console.log('✅ File selected:', file.name, file.type, file.size);
     
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-        showErrorMessage('Image size must be less than 10MB');
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+        showErrorMessage('Image size must be less than 5MB');
         event.target.value = '';
         return;
     }
@@ -625,8 +643,7 @@ function closeForgotPasswordModal() {
 // Forgot password handlers
 async function handleForgotPasswordRequest(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    showLoading(submitButton);
+    showLoading();
 
     const username = document.getElementById('forgot-username').value.trim();
     const gmail = document.getElementById('forgot-gmail').value.trim();
@@ -657,14 +674,13 @@ async function handleForgotPasswordRequest(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading(submitButton);
+        hideLoading();
     }
 }
 
 async function handleForgotPasswordReset(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    showLoading(submitButton);
+    showLoading();
 
     const username = document.getElementById('forgot-reset-username').value.trim();
     const gmail = document.getElementById('forgot-reset-gmail').value.trim();
@@ -674,7 +690,7 @@ async function handleForgotPasswordReset(e) {
 
     if (password !== passwordConfirm) {
         showErrorMessage('Passwords do not match');
-        hideLoading(submitButton);
+        hideLoading();
         return;
     }
 
@@ -699,7 +715,7 @@ async function handleForgotPasswordReset(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading(submitButton);
+        hideLoading();
     }
 }
 
@@ -1147,73 +1163,43 @@ function showAdminSection() {
     loadSellers();
 }
 
-function showLoading(button = null) {
-    // If specific button provided, only handle that one
-    const buttons = button ? [button] : document.querySelectorAll('button[type="submit"], button.btn-primary, button.btn-secondary');
-    
+function showLoading() {
+    // Add loading state to buttons
+    const buttons = document.querySelectorAll('button[type="submit"]');
     buttons.forEach(btn => {
-        // Skip if already loading or disabled
-        if (btn.disabled || btn.classList.contains('loading-state')) return;
-        
-        // Save original text and HTML
-        const originalText = btn.textContent.trim();
-        if (originalText && originalText !== '') {
-            btn.setAttribute('data-original-text', originalText);
+        if (btn.textContent.trim() !== '') {
             btn.disabled = true;
-            btn.classList.add('loading-state');
-            
-            // Create loading spinner HTML
-            btn.innerHTML = '<span class="spinner"></span> <span class="loading-text">Loading...</span>';
+            btn.innerHTML = '<span class="loading"></span> Loading...';
         }
     });
 }
 
-function hideLoading(button = null) {
-    // If specific button provided, only handle that one
-    const buttons = button ? [button] : document.querySelectorAll('button.loading-state, button[type="submit"]:disabled');
-    
+function hideLoading() {
+    // Remove loading state from buttons
+    const buttons = document.querySelectorAll('button[type="submit"]');
     buttons.forEach(btn => {
         btn.disabled = false;
-        btn.classList.remove('loading-state');
-        
         // Restore original text based on button context
-        let originalText = btn.getAttribute('data-original-text');
-        
-        if (!originalText) {
-            // Try to determine from form context
-            const form = btn.closest('form');
-            if (form) {
-                if (form.id === 'loginForm') {
-                    originalText = 'Login';
-                } else if (form.id === 'registerForm') {
-                    originalText = 'Register';
-                } else if (form.id === 'vegetableForm') {
-                    originalText = 'Save';
-                } else if (form.id === 'quantity-form') {
-                    originalText = 'Add to Cart';
-                } else if (form.id === 'checkout-form') {
-                    originalText = 'Place Order';
-                } else if (form.id === 'forgot-password-request-form') {
-                    originalText = 'Send Code';
-                } else if (form.id === 'forgot-password-reset-form') {
-                    originalText = 'Reset Password';
-                }
-            }
-        }
-        
-        // Restore button text
-        if (originalText) {
-            btn.textContent = originalText;
+        if (btn.closest('#loginForm')) {
+            btn.textContent = 'Login';
+        } else if (btn.closest('#registerForm')) {
+            btn.textContent = 'Register';
+        } else if (btn.closest('#vegetableForm')) {
+            btn.textContent = 'Save';
+        } else if (btn.closest('#quantity-form')) {
+            btn.textContent = 'Add to Cart';
+        } else if (btn.closest('#checkout-form')) {
+            btn.textContent = 'Place Order';
         } else {
-            // Fallback: try to extract from loading text
-            const loadingText = btn.querySelector('.loading-text');
-            if (loadingText) {
-                btn.textContent = btn.textContent.replace('Loading...', '').trim();
+            // For any other submit button, try to restore from data attribute or default
+            const originalText = btn.getAttribute('data-original-text');
+            if (originalText) {
+                btn.textContent = originalText;
+            } else if (btn.textContent.includes('Loading')) {
+                // Fallback: remove loading text
+                btn.textContent = btn.textContent.replace(/Loading\.\.\./g, '').trim();
             }
         }
-        
-        // Remove data attribute
-        btn.removeAttribute('data-original-text');
     });
 }
 
@@ -1423,8 +1409,7 @@ function closeVegetableModal() {
 
 async function handleVegetableSubmit(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    showLoading(submitButton);
+    showLoading();
 
     const formData = new FormData();
     const name = document.getElementById('vegetable-name').value.trim();
@@ -1487,7 +1472,7 @@ async function handleVegetableSubmit(e) {
             showErrorMessage('Network error. Please try again.');
         }
     } finally {
-        hideLoading(submitButton);
+        hideLoading();
     }
 }
 
@@ -1841,7 +1826,6 @@ function closeQuantityModal() {
 
 async function handleQuantitySubmit(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
     
     const quantityInput = document.getElementById('quantity-input');
     const quantity = parseFloat(quantityInput.value);
@@ -1882,7 +1866,7 @@ async function handleQuantitySubmit(e) {
     }
     
     try {
-        showLoading(submitButton);
+        showLoading();
         
         const response = await axios.post('/cart', {
             product_id: productId,
@@ -1893,11 +1877,11 @@ async function handleQuantitySubmit(e) {
         closeQuantityModal();
         showSuccessMessage(`${pendingAddToCart.productName} (${quantity} kg) added to cart!`);
         await loadCart(); // Refresh cart to update badge
-        hideLoading(submitButton);
+        hideLoading();
     } catch (error) {
         console.error('Add to cart error:', error);
         console.error('Error response:', error.response?.data);
-        hideLoading(submitButton);
+        hideLoading();
         if (error.response) {
             const data = error.response.data;
             if (error.response.status === 401) {
@@ -2087,6 +2071,18 @@ function openCheckoutModal() {
     
     if (checkoutModal) {
         if (checkoutTotal) checkoutTotal.textContent = `₱${parseFloat(cartData.total).toFixed(2)}`;
+        
+        // Set default values
+        const cityInput = document.getElementById('shipping-city');
+        const stateInput = document.getElementById('shipping-state');
+        const countryInput = document.getElementById('shipping-country');
+        const paymentMethod = document.getElementById('payment-method');
+        
+        if (cityInput) cityInput.value = 'Sinacaban';
+        if (stateInput) stateInput.value = 'Misamis Occidental';
+        if (countryInput) countryInput.value = 'Philippines';
+        if (paymentMethod) paymentMethod.value = 'cash_on_delivery';
+        
         checkoutModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
         closeCartModal(); // Close cart modal
@@ -2100,34 +2096,141 @@ function closeCheckoutModal() {
         document.body.classList.remove('modal-open');
         // Reset form
         const form = document.getElementById('checkout-form');
-        if (form) form.reset();
+        if (form) {
+            form.reset();
+            // Reset hidden fields
+            const cityInput = document.getElementById('shipping-city');
+            const stateInput = document.getElementById('shipping-state');
+            const countryInput = document.getElementById('shipping-country');
+            const paymentMethod = document.getElementById('payment-method');
+            
+            if (cityInput) cityInput.value = 'Sinacaban';
+            if (stateInput) stateInput.value = 'Misamis Occidental';
+            if (countryInput) countryInput.value = 'Philippines';
+            if (paymentMethod) paymentMethod.value = 'cash_on_delivery';
+        }
+        // Hide barangay dropdown
+        const dropdown = document.getElementById('barangay-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
     }
+}
+
+// Setup barangay dropdown with filtering
+function setupBarangayDropdown() {
+    const barangayInput = document.getElementById('shipping-barangay');
+    const barangayDropdown = document.getElementById('barangay-dropdown');
+    
+    if (!barangayInput || !barangayDropdown) return;
+    
+    // Filter and display barangays based on input
+    function filterBarangays(searchTerm) {
+        const filtered = SINACABAN_BARANGAYS.filter(barangay => 
+            barangay.toLowerCase().startsWith(searchTerm.toLowerCase())
+        );
+        
+        barangayDropdown.innerHTML = '';
+        
+        if (filtered.length === 0 && searchTerm.length > 0) {
+            barangayDropdown.innerHTML = '<div style="padding: 12px; color: #718096; text-align: center;">No barangay found</div>';
+            barangayDropdown.style.display = 'block';
+            return;
+        }
+        
+        if (filtered.length === 0) {
+            barangayDropdown.style.display = 'none';
+            return;
+        }
+        
+        filtered.forEach(barangay => {
+            const option = document.createElement('div');
+            option.style.cssText = 'padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: background 0.2s;';
+            option.textContent = barangay;
+            option.addEventListener('mouseenter', () => {
+                option.style.background = '#f7fafc';
+            });
+            option.addEventListener('mouseleave', () => {
+                option.style.background = 'white';
+            });
+            option.addEventListener('click', () => {
+                barangayInput.value = barangay;
+                barangayDropdown.style.display = 'none';
+            });
+            barangayDropdown.appendChild(option);
+        });
+        
+        barangayDropdown.style.display = 'block';
+    }
+    
+    // Show all barangays when input is focused and empty
+    barangayInput.addEventListener('focus', () => {
+        if (barangayInput.value.trim() === '') {
+            filterBarangays('');
+        } else {
+            filterBarangays(barangayInput.value);
+        }
+    });
+    
+    // Filter as user types
+    barangayInput.addEventListener('input', (e) => {
+        filterBarangays(e.target.value);
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target !== barangayInput && !barangayDropdown.contains(target)) {
+            barangayDropdown.style.display = 'none';
+        }
+    });
+    
+    // Hide dropdown on blur (with delay to allow click events)
+    barangayInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            if (document.activeElement !== barangayInput) {
+                barangayDropdown.style.display = 'none';
+            }
+        }, 200);
+    });
 }
 
 async function handleCheckout(e) {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
     
+    const barangay = document.getElementById('shipping-barangay').value.trim();
     const address = document.getElementById('shipping-address').value.trim();
-    const city = document.getElementById('shipping-city').value.trim();
-    const state = document.getElementById('shipping-state').value.trim();
-    const postalCode = document.getElementById('shipping-postal-code').value.trim();
+    const city = document.getElementById('shipping-city').value.trim() || 'Sinacaban';
+    const state = document.getElementById('shipping-state').value.trim() || 'Misamis Occidental';
     const country = document.getElementById('shipping-country').value.trim() || 'Philippines';
-    const paymentMethod = document.getElementById('payment-method').value;
+    const paymentMethod = 'cash_on_delivery'; // Only COD allowed
     const notes = document.getElementById('order-notes').value.trim();
     
-    if (!address || !city) {
-        showErrorMessage('Please fill in the required address fields');
+    // Validate barangay
+    if (!barangay) {
+        showErrorMessage('Please select a barangay');
         return;
     }
     
+    // Validate that barangay is from Sinacaban list
+    if (!SINACABAN_BARANGAYS.includes(barangay)) {
+        showErrorMessage('Please select a valid barangay from Sinacaban');
+        return;
+    }
+    
+    if (!address) {
+        showErrorMessage('Please enter your street address or house number');
+        return;
+    }
+    
+    // Combine address with barangay
+    const fullAddress = `${address}, ${barangay}`;
+    
     try {
-        showLoading(submitButton);
+        showLoading();
         const response = await axios.post('/orders/checkout', {
-            shipping_address: address,
+            shipping_address: fullAddress,
             shipping_city: city,
-            shipping_state: state || null,
-            shipping_postal_code: postalCode || null,
+            shipping_state: state,
+            shipping_postal_code: null,
             shipping_country: country,
             payment_method: paymentMethod,
             notes: notes || null
@@ -2137,10 +2240,10 @@ async function handleCheckout(e) {
         closeCheckoutModal();
         await loadCart(); // Refresh cart (should be empty now)
         await loadVegetables(); // Refresh vegetables to show updated stock
-        hideLoading(submitButton);
+        hideLoading();
     } catch (error) {
         console.error('Checkout error:', error);
-        hideLoading(submitButton);
+        hideLoading();
         if (error.response) {
             const data = error.response.data;
             if (error.response.status === 401) {
