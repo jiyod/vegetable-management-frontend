@@ -2318,9 +2318,11 @@ function displayOrders(orders) {
         };
         
         const statusColor = statusColors[order.status] || '#6b7280';
+        const canCancel = canCancelOrder(order);
         
         return `
-            <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;" onclick="viewOrderDetails(${order.id})">
+            <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="cursor: pointer;" onclick="viewOrderDetails(${order.id})">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
                     <div>
                         <h4 style="margin: 0 0 5px; color: #1a202c;">Order #${order.order_number}</h4>
@@ -2336,6 +2338,12 @@ function displayOrders(orders) {
                     <p style="margin: 0; color: #718096; font-size: 14px;">${order.shipping_address}, ${order.shipping_city}${order.shipping_state ? ', ' + order.shipping_state : ''}${order.shipping_postal_code ? ' ' + order.shipping_postal_code : ''}</p>
                     <p style="margin: 10px 0 0; color: #718096; font-size: 14px;"><strong>Items:</strong> ${order.items ? order.items.length : 0} item(s)</p>
                 </div>
+                </div>
+                ${canCancel ? `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: right;">
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); cancelOrder(${order.id});" style="font-size: 12px; padding: 8px 16px;">Cancel Order</button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -2447,9 +2455,73 @@ function displayOrderDetails(order) {
         </div>
         
         <div style="text-align: center; margin-top: 20px;">
+            ${canCancelOrder(order) ? `
+                <button class="btn btn-danger" onclick="cancelOrder(${order.id})" style="margin-right: 10px;">Cancel Order</button>
+            ` : ''}
             <button class="btn btn-secondary" onclick="closeOrderDetailsModal()">Close</button>
         </div>
     `;
+}
+
+// Check if order can be cancelled
+function canCancelOrder(order) {
+    if (!order) return false;
+    
+    // Only customers can cancel orders
+    if (!currentUser || currentUser.role !== 'customer') return false;
+    
+    // Can only cancel pending or confirmed orders
+    const cancellableStatuses = ['pending', 'confirmed'];
+    if (!cancellableStatuses.includes(order.status)) return false;
+    
+    // Check if any items are already shipped or delivered
+    if (order.items && order.items.length > 0) {
+        const hasShippedItems = order.items.some(item => 
+            ['shipped', 'delivered'].includes(item.status)
+        );
+        if (hasShippedItems) return false;
+    }
+    
+    return true;
+}
+
+// Cancel order function
+function cancelOrder(orderId) {
+    if (!orderId) return;
+    
+    // Confirm cancellation
+    showConfirmDialog(
+        'Cancel Order',
+        'Are you sure you want to cancel this order? This action cannot be undone and stock will be restored.',
+        async () => {
+            try {
+                showLoading();
+                const response = await axios.post(`/orders/${orderId}/cancel`);
+                
+                showSuccessMessage('Order cancelled successfully');
+                
+                // Close order details modal
+                closeOrderDetailsModal();
+                
+                // Reload orders to show updated status
+                await loadOrders();
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Cancel order error:', error);
+                hideLoading();
+                if (error.response) {
+                    const data = error.response.data;
+                    showErrorMessage(data.error?.description || 'Failed to cancel order');
+                } else {
+                    showErrorMessage('Network error. Please try again.');
+                }
+            }
+        },
+        'Cancel Order',
+        'Keep Order',
+        true
+    );
 }
 
 function openOrdersModal() {
