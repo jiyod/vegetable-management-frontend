@@ -235,75 +235,75 @@ function setupEventListeners() {
         adminDashboardBtn.addEventListener('click', () => {
             showAdminSection();
         });
+    }
+    
+    // Customer seller browsing
+    const browseSellersBtn = document.getElementById('browse-sellers-btn');
+    const viewAllProductsBtn = document.getElementById('view-all-products-btn');
+    const customerSellerSearch = document.getElementById('customer-seller-search');
+    
+    if (browseSellersBtn) {
+        browseSellersBtn.addEventListener('click', () => {
+            showCustomerSellersSection();
+        });
+    }
+    
+    // Seller orders button
+    const sellerOrdersBtn = document.getElementById('seller-orders-btn');
+    if (sellerOrdersBtn) {
+        sellerOrdersBtn.addEventListener('click', () => {
+            showSellerOrdersSection();
+        });
+    }
+    
+    // Back to vegetables button
+    const backToVegetablesBtn = document.getElementById('back-to-vegetables-btn');
+    if (backToVegetablesBtn) {
+        backToVegetablesBtn.addEventListener('click', () => {
+            hideSellerOrdersSection();
+        });
+    }
+    
+    if (viewAllProductsBtn) {
+        viewAllProductsBtn.addEventListener('click', () => {
+            showCustomerProductsSection();
+        });
+    }
+    
+    if (customerSellerSearch) {
+        customerSellerSearch.addEventListener('input', (e) => {
+            filterCustomerSellers(e.target.value);
+        });
+    }
+    
+    // Cart button
+    const cartBtn = document.getElementById('cart-btn');
+    if (cartBtn) {
+        cartBtn.addEventListener('click', () => {
+            loadCart();
+            openCartModal();
+        });
+    }
+    
+    // Orders button
+    const ordersBtn = document.getElementById('orders-btn');
+    if (ordersBtn) {
+        ordersBtn.addEventListener('click', () => {
+            loadOrders();
+            openOrdersModal();
+        });
+    }
+    
+    // Checkout form
+    const checkoutForm = document.getElementById('checkout-form');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', handleCheckout);
+    }
+    
+    // Barangay dropdown functionality
+    setupBarangayDropdown();
         
-        // Customer seller browsing
-        const browseSellersBtn = document.getElementById('browse-sellers-btn');
-        const viewAllProductsBtn = document.getElementById('view-all-products-btn');
-        const customerSellerSearch = document.getElementById('customer-seller-search');
-        
-        if (browseSellersBtn) {
-            browseSellersBtn.addEventListener('click', () => {
-                showCustomerSellersSection();
-            });
-        }
-        
-        // Seller orders button
-        const sellerOrdersBtn = document.getElementById('seller-orders-btn');
-        if (sellerOrdersBtn) {
-            sellerOrdersBtn.addEventListener('click', () => {
-                showSellerOrdersSection();
-            });
-        }
-        
-        // Back to vegetables button
-        const backToVegetablesBtn = document.getElementById('back-to-vegetables-btn');
-        if (backToVegetablesBtn) {
-            backToVegetablesBtn.addEventListener('click', () => {
-                hideSellerOrdersSection();
-            });
-        }
-        
-        if (viewAllProductsBtn) {
-            viewAllProductsBtn.addEventListener('click', () => {
-                showCustomerProductsSection();
-            });
-        }
-        
-        if (customerSellerSearch) {
-            customerSellerSearch.addEventListener('input', (e) => {
-                filterCustomerSellers(e.target.value);
-            });
-        }
-        
-        // Cart button
-        const cartBtn = document.getElementById('cart-btn');
-        if (cartBtn) {
-            cartBtn.addEventListener('click', () => {
-                loadCart();
-                openCartModal();
-            });
-        }
-        
-        // Orders button
-        const ordersBtn = document.getElementById('orders-btn');
-        if (ordersBtn) {
-            ordersBtn.addEventListener('click', () => {
-                loadOrders();
-                openOrdersModal();
-            });
-        }
-        
-        // Checkout form
-        const checkoutForm = document.getElementById('checkout-form');
-        if (checkoutForm) {
-            checkoutForm.addEventListener('submit', handleCheckout);
-        }
-        
-        // Barangay dropdown functionality
-        setupBarangayDropdown();
-        }
-        
-        // Quantity modal close button
+    // Quantity modal close button
         const quantityModal = document.getElementById('quantity-modal');
         if (quantityModal) {
             const closeBtn = quantityModal.querySelector('.close');
