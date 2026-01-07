@@ -840,3 +840,20 @@ header h1 {
         gap: 10px !important;
     }
 }
+
+/* Ensure create user modal buttons are visible */
+.create-user-modal-content .form-actions {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 100002 !important;
+    position: relative !important;
+}
+
+.create-user-modal-content .form-actions button {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 100003 !important;
+    position: relative !important;
+}

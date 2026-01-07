@@ -400,6 +400,15 @@ function setupEventListeners() {
     if (forgotPasswordRequestForm) {
         forgotPasswordRequestForm.addEventListener('submit', handleForgotPasswordRequest);
     }
+    
+    // Add event listener for send reset link button
+    const sendResetLinkBtn = document.getElementById('send-reset-link-btn');
+    if (sendResetLinkBtn) {
+        sendResetLinkBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            sendPasswordResetLink();
+        });
+    }
     if (forgotPasswordResetForm) {
         forgotPasswordResetForm.addEventListener('submit', handleForgotPasswordReset);
     }
@@ -703,19 +712,16 @@ async function handleForgotPasswordRequest(e) {
     e.preventDefault();
     showLoading();
 
-    const username = document.getElementById('forgot-username').value.trim();
     const email = document.getElementById('forgot-email').value.trim();
 
     try {
-        const response = await axios.post('/forgot-password/request', { username, email });
+        const response = await axios.post('/forgot-password/request', { email });
         const data = response.data;
 
         showSuccessMessage(data.message || 'A 6-digit code has been sent to your email.');
 
         // Pre-fill reset form
-        const resetUsername = document.getElementById('forgot-reset-username');
         const resetEmail = document.getElementById('forgot-reset-email');
-        if (resetUsername) resetUsername.value = username;
         if (resetEmail) resetEmail.value = email;
 
         // Show reset step
@@ -736,11 +742,37 @@ async function handleForgotPasswordRequest(e) {
     }
 }
 
+async function sendPasswordResetLink() {
+    const email = document.getElementById('forgot-email').value.trim();
+    
+    if (!email) {
+        showErrorMessage('Please enter your email address');
+        return;
+    }
+
+    showLoading();
+    try {
+        const response = await axios.post('/forgot-password-link', { email });
+        const data = response.data;
+        showSuccessMessage(data.message || 'Password reset link has been sent to your email.');
+        closeForgotPasswordModal();
+    } catch (error) {
+        console.error('Send reset link error:', error);
+        if (error.response) {
+            const data = error.response.data;
+            showErrorMessage(data.error?.description || data.error || 'Failed to send reset link');
+        } else {
+            showErrorMessage('Network error. Please try again.');
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
 async function handleForgotPasswordReset(e) {
     e.preventDefault();
     showLoading();
 
-    const username = document.getElementById('forgot-reset-username').value.trim();
     const email = document.getElementById('forgot-reset-email').value.trim();
     const otp = document.getElementById('forgot-otp').value.trim();
     const password = document.getElementById('forgot-new-password').value;
@@ -754,7 +786,6 @@ async function handleForgotPasswordReset(e) {
 
     try {
         const response = await axios.post('/forgot-password/reset', {
-            username,
             email,
             otp,
             password,

@@ -103,21 +103,17 @@
                 <!-- Step 1: Request OTP -->
                 <div id="forgot-step-request">
                     <p style="font-size: 14px; color: #4a5568; margin-bottom: 10px;">
-                        Enter your <strong>username</strong> and the <strong>email</strong> you used during registration.
+                        Enter the <strong>email</strong> you used during registration.
                         We will send a 6-digit code to that email address.
                     </p>
                     <form id="forgot-password-request-form">
-                        <div class="form-group">
-                            <label for="forgot-username">Username</label>
-                            <input type="text" id="forgot-username" required>
-                        </div>
                         <div class="form-group">
                             <label for="forgot-email">Email</label>
                             <input type="email" id="forgot-email" required>
                         </div>
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Send Code</button>
                         <p style="margin-top: 10px; font-size: 13px; text-align: center;">
-                            Prefer a reset link? <a href="#" onclick="document.getElementById('forgot-password-request-form').dispatchEvent(new Event('submit')); return false;">Send reset link</a>
+                            Prefer a reset link? <a href="#" id="send-reset-link-btn" style="color: #667eea; text-decoration: underline; cursor: pointer;">Send reset link</a>
                         </p>
                     </form>
                 </div>
@@ -128,10 +124,6 @@
                         We sent a 6-digit code to your email. Enter the code and your new password below.
                     </p>
                     <form id="forgot-password-reset-form">
-                        <div class="form-group">
-                            <label for="forgot-reset-username">Username</label>
-                            <input type="text" id="forgot-reset-username" required>
-                        </div>
                         <div class="form-group">
                             <label for="forgot-reset-email">Email</label>
                             <input type="email" id="forgot-reset-email" required>
@@ -289,9 +281,9 @@
                                 Mark email as verified (skip email verification)
                             </label>
                         </div>
-                        <div class="form-actions" style="justify-content: center; gap: 15px; margin-top: 25px;">
-                            <button type="button" class="btn btn-secondary" onclick="closeCreateUserModal()" style="min-width: 120px;">Cancel</button>
-                            <button type="submit" class="btn btn-primary" style="min-width: 120px;">Create User</button>
+                        <div class="form-actions" style="display: flex; justify-content: center; gap: 15px; margin-top: 25px; z-index: 10; position: relative;">
+                            <button type="button" class="btn btn-secondary" onclick="closeCreateUserModal()" style="min-width: 120px; z-index: 11; position: relative;">Cancel</button>
+                            <button type="submit" class="btn btn-primary" style="min-width: 120px; z-index: 11; position: relative;">Create User</button>
                         </div>
                     </form>
                 </div>
