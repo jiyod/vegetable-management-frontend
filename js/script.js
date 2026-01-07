@@ -226,6 +226,28 @@ function setupEventListeners() {
         });
     }
 
+    // Create user button
+    const createUserBtn = document.getElementById('create-user-btn');
+    if (createUserBtn) {
+        createUserBtn.addEventListener('click', () => {
+            openCreateUserModal();
+        });
+    }
+
+    // Create user form
+    const createUserForm = document.getElementById('create-user-form');
+    if (createUserForm) {
+        createUserForm.addEventListener('submit', handleCreateUser);
+    }
+
+    // Admin dashboard from users button
+    const adminDashboardFromUsersBtn = document.getElementById('admin-dashboard-from-users-btn');
+    if (adminDashboardFromUsersBtn) {
+        adminDashboardFromUsersBtn.addEventListener('click', () => {
+            showAdminSection();
+        });
+    }
+
     if (viewSellersBtn) {
         viewSellersBtn.addEventListener('click', () => {
             loadSellers();
@@ -1046,73 +1068,125 @@ async function loadUsers() {
 
 function displayUsers(users) {
     const usersList = document.getElementById('users-list');
+    const usersListTitle = document.getElementById('users-list-title');
     if (!usersList) return;
     
-    usersList.innerHTML = '';
+    // Update title with count
+    if (usersListTitle) {
+        usersListTitle.textContent = `Users List (${users.length} total)`;
+    }
 
     if (users.length === 0) {
-        usersList.innerHTML = '<p style="text-align: center; color: #718096; padding: 20px;">No users found.</p>';
+        usersList.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">No users found.</p>';
         return;
     }
 
+    // Count total admins for delete protection
+    const adminCount = users.filter(u => u.role === 'admin').length;
+    const isCurrentUser = (userId) => currentUser && currentUser.id === userId;
+
+    // Build table HTML
+    let tableHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="background: #f3f4f6; border-bottom: 2px solid #e2e8f0;">
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">ID</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Username</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Email</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Name</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Role</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Status</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Created</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
     users.forEach(user => {
-        const card = document.createElement('div');
-        card.className = 'vegetable-card';
-        card.style.maxWidth = '100%';
-        
         const roleColors = {
-            'admin': '#8b5cf6',
+            'admin': '#ef4444',
             'seller': '#3b82f6',
             'customer': '#10b981'
         };
         
-        const roleColor = roleColors[user.role] || '#6b7280';
-        const roleBadge = `<span style="display: inline-block; padding: 4px 12px; background: ${roleColor}; color: white; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: capitalize;">${user.role}</span>`;
+        const roleLabels = {
+            'admin': 'ADMIN',
+            'seller': 'SELLER',
+            'customer': 'CUSTOMER'
+        };
         
-        const sellerStatusBadge = user.role === 'seller' && user.seller_status
-            ? `<span style="display: inline-block; margin-left: 8px; padding: 4px 12px; background: ${user.seller_status === 'approved' ? '#10b981' : user.seller_status === 'pending' ? '#f59e0b' : '#ef4444'}; color: white; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: capitalize;">${user.seller_status}</span>`
-            : '';
-
-        // Don't show role change for current user
-        const isCurrentUser = currentUser && currentUser.id === user.id;
+        const roleColor = roleColors[user.role] || '#6b7280';
+        const roleBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${roleColor}; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">${roleLabels[user.role] || user.role.toUpperCase()}</span>`;
+        
+        const statusColor = user.email_verified ? '#10b981' : '#f59e0b';
+        const statusText = user.email_verified ? 'ACTIVE' : 'PENDING';
+        const statusBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${statusColor}; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">${statusText}</span>`;
+        
+        const createdDate = new Date(user.created_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        
+        const currentUserBadge = isCurrentUser(user.id) ? '<span style="display: inline-block; margin-left: 5px; padding: 2px 6px; background: #3b82f6; color: white; border-radius: 3px; font-size: 10px; font-weight: 600;">YOU</span>' : '';
+        
         const roleOptions = ['customer', 'seller', 'admin'].map(role => 
             `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
         ).join('');
 
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                <div>
-                    <h3 style="margin: 0 0 5px 0;">${user.name}</h3>
-                    <p style="margin: 0; color: #6b7280; font-size: 14px;">@${user.username}</p>
-                </div>
-                <div>
-                    ${roleBadge}
-                    ${sellerStatusBadge}
-                </div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <p style="margin: 5px 0; color: #374151;"><strong>Email:</strong> ${user.email}</p>
-                <p style="margin: 5px 0; color: #374151;"><strong>Email Verified:</strong> ${user.email_verified ? '✓ Yes' : '✗ No'}</p>
-                <p style="margin: 5px 0; color: #374151;"><strong>User ID:</strong> ${user.id}</p>
-                <p style="margin: 5px 0; color: #374151;"><strong>Joined:</strong> ${new Date(user.created_at).toLocaleDateString()}</p>
-            </div>
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <label style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
-                    <span style="color: #374151; font-weight: 500;">Change Role:</span>
-                    <select id="role-select-${user.id}" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex: 1;" ${isCurrentUser ? 'disabled' : ''}>
-                        ${roleOptions}
-                    </select>
-                </label>
-                ${!isCurrentUser ? `
-                    <button class="btn btn-primary" onclick="updateUserRole(${user.id})" style="min-width: 120px;">Update Role</button>
-                ` : `
-                    <span style="color: #6b7280; font-size: 12px; font-style: italic;">(Cannot change your own role)</span>
-                `}
-            </div>
+        // Check if can delete (can't delete if only 2 admins and this is an admin)
+        const canDelete = !isCurrentUser(user.id) && !(user.role === 'admin' && adminCount <= 2);
+        const deleteButtonDisabled = !canDelete;
+        const deleteButtonTitle = isCurrentUser(user.id) 
+            ? 'Cannot delete your own account' 
+            : (user.role === 'admin' && adminCount <= 2) 
+                ? 'Cannot delete admin when only 2 admins remain' 
+                : 'Delete user';
+
+        tableHTML += `
+            <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+                <td style="padding: 12px; color: #374151;">${user.id}</td>
+                <td style="padding: 12px; color: #1a202c; font-weight: 500;">
+                    ${user.username}${currentUserBadge}
+                </td>
+                <td style="padding: 12px; color: #4a5568;">${user.email}</td>
+                <td style="padding: 12px; color: #4a5568;">${user.name}</td>
+                <td style="padding: 12px;">${roleBadge}</td>
+                <td style="padding: 12px;">${statusBadge}</td>
+                <td style="padding: 12px; color: #6b7280;">${createdDate}</td>
+                <td style="padding: 12px;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="editUserRole(${user.id})" style="padding: 6px 12px; font-size: 12px;">Edit</button>
+                        <select id="role-select-${user.id}" style="padding: 6px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px;" ${isCurrentUser(user.id) ? 'disabled' : ''} onchange="updateUserRole(${user.id})">
+                            ${roleOptions}
+                        </select>
+                        ${!isCurrentUser(user.id) ? '' : '<span style="color: #6b7280; font-size: 11px; font-style: italic;">(Your account)</span>'}
+                        ${canDelete ? `
+                            <button class="btn btn-danger" onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 12px;">Delete</button>
+                        ` : `
+                            <button class="btn btn-danger" disabled style="padding: 6px 12px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" title="${deleteButtonTitle}">Delete</button>
+                        `}
+                    </div>
+                </td>
+            </tr>
         `;
-        
-        usersList.appendChild(card);
     });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+    usersList.innerHTML = tableHTML;
+}
+
+function editUserRole(userId) {
+    const roleSelect = document.getElementById(`role-select-${userId}`);
+    if (roleSelect) {
+        roleSelect.focus();
+        roleSelect.style.border = '2px solid #667eea';
+    }
 }
 
 async function updateUserRole(userId) {
@@ -1120,8 +1194,11 @@ async function updateUserRole(userId) {
     if (!roleSelect) return;
     
     const newRole = roleSelect.value;
-    const userCard = roleSelect.closest('.vegetable-card');
-    const userName = userCard ? userCard.querySelector('h3')?.textContent : 'User';
+    
+    // Get user name from table row
+    const row = roleSelect.closest('tr');
+    const nameCell = row ? row.querySelector('td:nth-child(4)') : null;
+    const userName = nameCell ? nameCell.textContent.trim() : 'User';
     
     // Special confirmation for admin role
     if (newRole === 'admin') {
@@ -1144,9 +1221,11 @@ async function updateUserRole(userId) {
                             handleInvalidToken();
                         } else {
                             showErrorMessage(data.error?.description || 'Failed to update user role');
+                            await loadUsers();
                         }
                     } else {
                         showErrorMessage('Network error. Please try again.');
+                        await loadUsers();
                     }
                 }
             },
@@ -1155,36 +1234,145 @@ async function updateUserRole(userId) {
             true
         );
     } else {
-        // Regular confirmation for other role changes
+        // Auto-update for non-admin roles (no confirmation needed)
+        try {
+            showLoading();
+            await axios.put(`/admin/users/${userId}/role`, { role: newRole });
+            showSuccessMessage(`User role updated to ${newRole} successfully!`);
+            await loadUsers(); // Refresh users list
+            hideLoading();
+        } catch (error) {
+            console.error('Update user role error:', error);
+            hideLoading();
+            if (error.response) {
+                const data = error.response.data;
+                if (error.response.status === 401) {
+                    handleInvalidToken();
+                } else {
+                    showErrorMessage(data.error?.description || 'Failed to update user role');
+                    await loadUsers();
+                }
+            } else {
+                showErrorMessage('Network error. Please try again.');
+                await loadUsers();
+            }
+        }
+    }
+}
+
+async function deleteUser(userId, userName) {
+    // Get current admin count
+    try {
+        const response = await axios.get('/admin/users?role=admin&per_page=100');
+        const admins = response.data.data || response.data || [];
+        const adminCount = admins.length;
+        
+        // Get user to check if they're admin
+        const userResponse = await axios.get(`/admin/users/${userId}`);
+        const user = userResponse.data.user || userResponse.data;
+        
+        // Check if trying to delete admin when only 2 remain
+        if (user.role === 'admin' && adminCount <= 2) {
+            showErrorMessage('Cannot delete admin account. At least 2 admin accounts must remain in the system.');
+            return;
+        }
+        
         showConfirmDialog(
-            'Change User Role',
-            `Are you sure you want to change "${userName}" role to ${newRole}?`,
+            'Delete User',
+            `Are you sure you want to delete user "${userName}"? This action cannot be undone and all their data will be permanently removed.`,
             async () => {
                 try {
                     showLoading();
-                    await axios.put(`/admin/users/${userId}/role`, { role: newRole });
-                    showSuccessMessage(`User role updated to ${newRole} successfully!`);
+                    await axios.delete(`/admin/users/${userId}`);
+                    showSuccessMessage('User deleted successfully!');
                     await loadUsers(); // Refresh users list
                     hideLoading();
                 } catch (error) {
-                    console.error('Update user role error:', error);
+                    console.error('Delete user error:', error);
                     hideLoading();
                     if (error.response) {
                         const data = error.response.data;
                         if (error.response.status === 401) {
                             handleInvalidToken();
                         } else {
-                            showErrorMessage(data.error?.description || 'Failed to update user role');
+                            showErrorMessage(data.error?.description || 'Failed to delete user');
                         }
                     } else {
                         showErrorMessage('Network error. Please try again.');
                     }
                 }
             },
-            'Change Role',
+            'Delete',
             'Cancel',
             true
         );
+    } catch (error) {
+        console.error('Error checking admin count:', error);
+        showErrorMessage('Failed to verify user deletion. Please try again.');
+    }
+}
+
+// Create User Functions
+function openCreateUserModal() {
+    const modal = document.getElementById('create-user-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        // Reset form
+        const form = document.getElementById('create-user-form');
+        if (form) form.reset();
+        // Set default role to customer
+        const customerRadio = document.querySelector('input[name="create-user-role"][value="customer"]');
+        if (customerRadio) customerRadio.checked = true;
+    }
+}
+
+function closeCreateUserModal() {
+    const modal = document.getElementById('create-user-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+    }
+}
+
+async function handleCreateUser(e) {
+    e.preventDefault();
+    showLoading();
+
+    const name = document.getElementById('create-user-name').value.trim();
+    const username = document.getElementById('create-user-username').value.trim();
+    const email = document.getElementById('create-user-email').value.trim();
+    const password = document.getElementById('create-user-password').value;
+    const role = document.querySelector('input[name="create-user-role"]:checked')?.value || 'customer';
+    const emailVerified = document.getElementById('create-user-email-verified').checked;
+
+    try {
+        const response = await axios.post('/admin/users', {
+            name,
+            username,
+            email,
+            password,
+            role,
+            email_verified: emailVerified
+        });
+
+        showSuccessMessage('User created successfully!');
+        closeCreateUserModal();
+        await loadUsers(); // Refresh users list
+        hideLoading();
+    } catch (error) {
+        console.error('Create user error:', error);
+        hideLoading();
+        if (error.response) {
+            const data = error.response.data;
+            if (error.response.status === 401) {
+                handleInvalidToken();
+            } else {
+                showErrorMessage(data.error?.description || 'Failed to create user');
+            }
+        } else {
+            showErrorMessage('Network error. Please try again.');
+        }
     }
 }
 
@@ -1193,6 +1381,10 @@ window.approveSeller = approveSeller;
 window.rejectSeller = rejectSeller;
 window.suspendSeller = suspendSeller;
 window.updateUserRole = updateUserRole;
+window.deleteUser = deleteUser;
+window.editUserRole = editUserRole;
+window.openCreateUserModal = openCreateUserModal;
+window.closeCreateUserModal = closeCreateUserModal;
 
 // UI functions
 function showAuthSection() {
@@ -2662,6 +2854,7 @@ function displayOrderDetails(order) {
     const statusColors = {
         'pending': '#f59e0b',
         'approved': '#3b82f6',
+        'rejected': '#ef4444',
         'confirmed': '#3b82f6',
         'processing': '#8b5cf6',
         'shipped': '#6366f1',
@@ -2900,14 +3093,15 @@ function displaySellerOrders(orders) {
         const orderTotal = sellerItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
         
         const itemsHtml = sellerItems.map(item => {
-            const statusColors = {
-                'pending': '#f59e0b',
-                'approved': '#3b82f6',
-                'processing': '#8b5cf6',
-                'shipped': '#6366f1',
-                'delivered': '#10b981',
-                'cancelled': '#ef4444'
-            };
+        const statusColors = {
+            'pending': '#f59e0b',
+            'approved': '#3b82f6',
+            'rejected': '#ef4444',
+            'processing': '#8b5cf6',
+            'shipped': '#6366f1',
+            'delivered': '#10b981',
+            'cancelled': '#ef4444'
+        };
             const statusColor = statusColors[item.status] || '#718096';
             
             // Determine which buttons to show based on status
@@ -2918,7 +3112,7 @@ function displaySellerOrders(orders) {
                         <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'approved', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-success" style="padding: 8px 16px; font-size: 12px; flex: 1;">
                             ✓ Approve Order
                         </button>
-                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'cancelled', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-danger" style="padding: 8px 16px; font-size: 12px; flex: 1;">
+                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'rejected', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-danger" style="padding: 8px 16px; font-size: 12px; flex: 1;">
                             ✗ Reject
                         </button>
                     </div>
