@@ -651,3 +651,192 @@ header h1 {
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
+
+/* Seller Orders Section */
+#seller-orders-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
+    margin-top: 20px;
+    width: 100%;
+    clear: both;
+}
+
+#seller-orders-section.hidden {
+    display: none !important;
+}
+
+#seller-orders-section:not(.hidden) {
+    display: block !important;
+}
+
+/* Ensure vegetable section is properly hidden when seller orders is shown */
+.vegetable-section.hidden {
+    display: none !important;
+}
+
+/* User Management Responsive Styles */
+.users-header {
+    flex-wrap: wrap;
+}
+
+.users-header-buttons {
+    flex-wrap: wrap;
+}
+
+.users-search-controls {
+    flex-wrap: wrap;
+}
+
+.users-search-controls input,
+.users-search-controls select,
+.users-search-controls button {
+    min-width: 0;
+}
+
+.users-list-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.users-table {
+    min-width: 800px;
+}
+
+.user-card-mobile {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s;
+}
+
+.user-card-mobile:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile Responsive for User Management */
+@media (max-width: 768px) {
+    .users-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .users-header h3 {
+        font-size: 1.3rem;
+    }
+    
+    .users-header h3 span:first-child {
+        font-size: 20px;
+    }
+    
+    .users-header-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .users-header-buttons button {
+        width: 100%;
+    }
+    
+    .users-search-section {
+        padding: 15px;
+    }
+    
+    .users-search-section h4 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+    
+    .users-search-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .users-search-controls input,
+    .users-search-controls select,
+    .users-search-controls button {
+        width: 100%;
+        min-width: 0;
+    }
+    
+    .users-list-container {
+        padding: 15px;
+    }
+    
+    .users-list-container h4 {
+        font-size: 1.1rem;
+    }
+    
+    .users-table {
+        font-size: 12px;
+    }
+    
+    .users-table th,
+    .users-table td {
+        padding: 8px;
+        font-size: 12px;
+    }
+    
+    .users-table th:nth-child(1),
+    .users-table td:nth-child(1) {
+        display: none; /* Hide ID column on mobile */
+    }
+    
+    .users-table th:nth-child(3),
+    .users-table td:nth-child(3) {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .users-table th:nth-child(7),
+    .users-table td:nth-child(7) {
+        display: none; /* Hide Created column on mobile */
+    }
+    
+    .user-card-mobile {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .users-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .users-header h3 span:first-child {
+        font-size: 18px;
+    }
+    
+    .users-search-section {
+        padding: 12px;
+    }
+    
+    .users-list-container {
+        padding: 12px;
+    }
+    
+    .user-card-mobile {
+        padding: 10px;
+    }
+    
+    .user-card-mobile button,
+    .user-card-mobile select {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    
+    .create-user-modal-content {
+        max-width: calc(100% - 20px) !important;
+        margin: 10px !important;
+    }
+    
+    .create-user-role-options {
+        flex-direction: column;
+        gap: 10px !important;
+    }
+}

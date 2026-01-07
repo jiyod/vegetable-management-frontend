@@ -1293,6 +1293,10 @@ function displayUsers(users) {
                         ` : `
                             <button class="btn btn-danger" disabled style="padding: 6px 12px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" title="${deleteButtonTitle}">Delete</button>
                         `}
+                        <button class="btn btn-warning" onclick="changeUserPassword(${user.id}, '${user.name.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 12px;">Reset Password</button>
+                        ${!user.email_verified ? `
+                            <button class="btn btn-success" onclick="activateUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 12px;">Activate</button>
+                        ` : ''}
                     </div>
                 </td>
             </tr>
@@ -1438,6 +1442,47 @@ async function deleteUser(userId, userName) {
     }
 }
 
+async function changeUserPassword(userId, userName) {
+    const newPassword = prompt(`Enter a new password for "${userName}" (min 6 characters):`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+        showErrorMessage('Password must be at least 6 characters.');
+        return;
+    }
+    try {
+        showLoading();
+        await axios.post(`/admin/users/${userId}/password`, { password: newPassword });
+        showSuccessMessage('Password updated successfully');
+    } catch (error) {
+        console.error('Change password error:', error);
+        if (error.response) {
+            showErrorMessage(error.response.data?.error?.description || 'Failed to change password');
+        } else {
+            showErrorMessage('Network error. Please try again.');
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
+async function activateUser(userId, userName) {
+    try {
+        showLoading();
+        await axios.post(`/admin/users/${userId}/activate`);
+        showSuccessMessage(`User "${userName}" activated successfully`);
+        await loadUsers();
+    } catch (error) {
+        console.error('Activate user error:', error);
+        if (error.response) {
+            showErrorMessage(error.response.data?.error?.description || 'Failed to activate user');
+        } else {
+            showErrorMessage('Network error. Please try again.');
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
 // Create User Functions
 function openCreateUserModal() {
     const modal = document.getElementById('create-user-modal');
@@ -1511,6 +1556,8 @@ window.deleteUser = deleteUser;
 window.editUserRole = editUserRole;
 window.openCreateUserModal = openCreateUserModal;
 window.closeCreateUserModal = closeCreateUserModal;
+window.changeUserPassword = changeUserPassword;
+window.activateUser = activateUser;
 
 // UI functions
 function showAuthSection() {
@@ -2893,8 +2940,27 @@ function displayOrders(orders) {
         container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">You have no orders yet.</p>';
         return;
     }
+
+    // Sort orders by status then by created_at desc
+    const statusOrder = {
+        'pending': 1,
+        'approved': 2,
+        'processing': 3,
+        'shipped': 4,
+        'delivered': 5,
+        'cancelled': 6,
+        'refunded': 7
+    };
+    const sortedOrders = [...orders].sort((a, b) => {
+        const orderA = statusOrder[a.status] || 99;
+        const orderB = statusOrder[b.status] || 99;
+        if (orderA === orderB) {
+            return new Date(b.created_at) - new Date(a.created_at);
+        }
+        return orderA - orderB;
+    });
     
-    container.innerHTML = orders.map(order => {
+    container.innerHTML = sortedOrders.map(order => {
         const orderDate = new Date(order.created_at).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -2996,12 +3062,10 @@ function displayOrderDetails(order) {
         ? order.items[0].seller 
         : null;
     const sellerName = seller ? (seller.name || seller.username) : 'Unknown Seller';
-    const hasPending = order.items && order.items.some(item => item.status === 'pending');
     
-    // Generate HTML for items (all from same seller)
+    // Generate HTML for items (remove per-item status badge; show order-level status only)
     const itemsHtml = order.items && order.items.length > 0 ? order.items.map(item => {
         const product = item.product || {};
-        const itemStatusColor = statusColors[item.status] || '#6b7280';
         return `
             <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; gap: 15px; background: #fafafa;">
                 <img src="${product.image || '/images/default-vegetable.svg'}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px;">
@@ -3011,7 +3075,6 @@ function displayOrderDetails(order) {
                 </div>
                 <div style="text-align: right;">
                     <p style="margin: 0; color: #667eea; font-weight: 600; font-size: 14px;">₱${parseFloat(item.subtotal || 0).toFixed(2)}</p>
-                    <span style="display: inline-block; margin-top: 5px; padding: 3px 8px; background: ${itemStatusColor}; color: white; border-radius: 4px; font-size: 10px; text-transform: capitalize;">${item.status || 'pending'}</span>
                 </div>
             </div>
         `;
@@ -3024,9 +3087,6 @@ function displayOrderDetails(order) {
                 <div>
                     <h4 style="margin: 0 0 5px; font-size: 16px; font-weight: 600;">Seller: ${sellerName}</h4>
                     <p style="margin: 0; font-size: 12px; opacity: 0.9;">${order.items ? order.items.length : 0} item(s)</p>
-                </div>
-                <div style="text-align: right;">
-                    ${hasPending ? `<p style="margin: 0; font-size: 11px; opacity: 0.9;">⏳ Awaiting Approval</p>` : ''}
                 </div>
             </div>
         </div>
@@ -3063,11 +3123,13 @@ function displayOrderDetails(order) {
         <div style="border-top: 2px solid #e2e8f0; padding-top: 15px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                 <span style="color: #4a5568;">Payment Method:</span>
-                <span style="color: #1a202c; font-weight: 600; text-transform: capitalize;">${order.payment_method || 'N/A'}</span>
+                <span style="color: #1a202c; font-weight: 600; text-transform: capitalize;">${order.payment_method || 'Cash on delivery'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                 <span style="color: #4a5568;">Payment Status:</span>
-                <span style="color: #1a202c; font-weight: 600; text-transform: capitalize;">${order.payment_status || 'pending'}</span>
+                <span style="color: #1a202c; font-weight: 600; text-transform: capitalize;">
+                    ${order.payment_status === 'paid' ? 'Paid' : 'Not yet paid'}
+                </span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
                 <strong style="font-size: 18px; color: #1a202c;">Total Amount:</strong>
