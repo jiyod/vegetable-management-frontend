@@ -248,6 +248,19 @@ function setupEventListeners() {
         });
     }
 
+    // Handle window resize to update user display (table vs cards)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // If users section is visible, reload users to update display format
+            const usersSection = document.getElementById('users-section');
+            if (usersSection && usersSection.style.display !== 'none') {
+                loadUsers();
+            }
+        }, 250);
+    });
+
     if (viewSellersBtn) {
         viewSellersBtn.addEventListener('click', () => {
             loadSellers();
@@ -861,7 +874,29 @@ function displaySellers(sellers) {
         return;
     }
 
-    sellers.forEach(seller => {
+    // Sort sellers by status: pending, approved, rejected, suspended
+    const statusOrder = {
+        'pending': 1,
+        'approved': 2,
+        'rejected': 3,
+        'suspended': 4
+    };
+    
+    const sortedSellers = [...sellers].sort((a, b) => {
+        const statusA = a.seller_status || 'pending';
+        const statusB = b.seller_status || 'pending';
+        const orderA = statusOrder[statusA] || 99;
+        const orderB = statusOrder[statusB] || 99;
+        
+        // If same status, sort by created date (newest first)
+        if (orderA === orderB) {
+            return new Date(b.created_at) - new Date(a.created_at);
+        }
+        
+        return orderA - orderB;
+    });
+
+    sortedSellers.forEach(seller => {
         const card = document.createElement('div');
         card.className = 'vegetable-card';
         card.style.maxWidth = '100%';
@@ -1084,10 +1119,101 @@ function displayUsers(users) {
     // Count total admins for delete protection
     const adminCount = users.filter(u => u.role === 'admin').length;
     const isCurrentUser = (userId) => currentUser && currentUser.id === userId;
+    
+    // Check if mobile (screen width <= 768px)
+    const isMobile = window.innerWidth <= 768;
 
-    // Build table HTML
+    // Mobile: Show cards, Desktop: Show table
+    if (isMobile) {
+        let cardsHTML = '<div class="users-mobile-grid" style="display: grid; grid-template-columns: 1fr; gap: 15px;">';
+        
+        users.forEach(user => {
+            const roleColors = {
+                'admin': '#ef4444',
+                'seller': '#3b82f6',
+                'customer': '#10b981'
+            };
+            
+            const roleLabels = {
+                'admin': 'ADMIN',
+                'seller': 'SELLER',
+                'customer': 'CUSTOMER'
+            };
+            
+            const roleColor = roleColors[user.role] || '#6b7280';
+            const roleBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${roleColor}; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">${roleLabels[user.role] || user.role.toUpperCase()}</span>`;
+            
+            const statusColor = user.email_verified ? '#10b981' : '#f59e0b';
+            const statusText = user.email_verified ? 'ACTIVE' : 'PENDING';
+            const statusBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${statusColor}; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">${statusText}</span>`;
+            
+            const createdDate = new Date(user.created_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            
+            const currentUserBadge = isCurrentUser(user.id) ? '<span style="display: inline-block; margin-left: 5px; padding: 2px 6px; background: #3b82f6; color: white; border-radius: 3px; font-size: 10px; font-weight: 600;">YOU</span>' : '';
+            
+            const roleOptions = ['customer', 'seller', 'admin'].map(role => 
+                `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
+            ).join('');
+
+            const canDelete = !isCurrentUser(user.id) && !(user.role === 'admin' && adminCount <= 2);
+            const deleteButtonTitle = isCurrentUser(user.id) 
+                ? 'Cannot delete your own account' 
+                : (user.role === 'admin' && adminCount <= 2) 
+                    ? 'Cannot delete admin when only 2 admins remain' 
+                    : 'Delete user';
+
+            cardsHTML += `
+                <div class="user-card-mobile" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="font-weight: 600; color: #1a202c; font-size: 16px; margin-bottom: 4px;">
+                                ${user.name}${currentUserBadge}
+                            </div>
+                            <div style="color: #6b7280; font-size: 13px;">@${user.username}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            ${roleBadge}
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <div style="margin-bottom: 6px; font-size: 13px;"><strong>Email:</strong> <span style="color: #4a5568;">${user.email}</span></div>
+                        <div style="margin-bottom: 6px; font-size: 13px;"><strong>ID:</strong> <span style="color: #4a5568;">${user.id}</span></div>
+                        <div style="font-size: 13px;"><strong>Created:</strong> <span style="color: #4a5568;">${createdDate}</span></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <label style="font-size: 12px; color: #374151; font-weight: 500; min-width: 60px;">Role:</label>
+                            <select id="role-select-${user.id}" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 13px; min-width: 120px;" ${isCurrentUser(user.id) ? 'disabled' : ''} onchange="updateUserRole(${user.id})">
+                                ${roleOptions}
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="editUserRole(${user.id})" style="flex: 1; padding: 8px 12px; font-size: 12px; min-width: 80px;">Edit</button>
+                            ${canDelete ? `
+                                <button class="btn btn-danger" onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')" style="flex: 1; padding: 8px 12px; font-size: 12px; min-width: 80px;">Delete</button>
+                            ` : `
+                                <button class="btn btn-danger" disabled style="flex: 1; padding: 8px 12px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" title="${deleteButtonTitle}">Delete</button>
+                            `}
+                        </div>
+                        ${isCurrentUser(user.id) ? '<div style="font-size: 11px; color: #6b7280; font-style: italic; text-align: center; margin-top: 4px;">(Your account)</div>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        cardsHTML += '</div>';
+        usersList.innerHTML = cardsHTML;
+        return;
+    }
+
+    // Desktop: Build table HTML
     let tableHTML = `
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <table class="users-table" style="width: 100%; border-collapse: collapse; font-size: 14px;">
             <thead>
                 <tr style="background: #f3f4f6; border-bottom: 2px solid #e2e8f0;">
                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">ID</th>
@@ -3233,7 +3359,9 @@ function showSellerOrdersSection() {
     
     if (sellerOrdersSection && vegetableSection) {
         vegetableSection.classList.add('hidden');
+        vegetableSection.style.display = 'none';
         sellerOrdersSection.classList.remove('hidden');
+        sellerOrdersSection.style.display = 'block';
         loadSellerOrders();
     }
 }
@@ -3244,7 +3372,9 @@ function hideSellerOrdersSection() {
     
     if (sellerOrdersSection && vegetableSection) {
         sellerOrdersSection.classList.add('hidden');
+        sellerOrdersSection.style.display = 'none';
         vegetableSection.classList.remove('hidden');
+        vegetableSection.style.display = 'block';
     }
 }
 
