@@ -3490,21 +3490,28 @@ function displaySellerOrders(orders) {
     };
     
     // First, filter and get seller items for each order to determine status
-    const ordersWithSellerItems = orders.map(order => {
-        const sellerItems = order.items.filter(item => {
-            return item.seller && item.seller.id === currentUser.id;
-        });
-        // Get order status from seller items (all items should have same status since approval is per order)
-        const orderStatus = sellerItems.length > 0 ? sellerItems[0].status : order.status;
-        return { ...order, sellerItems, orderStatus };
-    });
+    const ordersWithSellerItems = orders
+        .map(order => {
+            if (!order || !order.items) return null;
+            const sellerItems = order.items.filter(item => {
+                return item.seller && item.seller.id === currentUser.id;
+            });
+            // Only include orders that have seller items
+            if (sellerItems.length === 0) return null;
+            // Get order status from seller items (all items should have same status since approval is per order)
+            const orderStatus = sellerItems[0].status || order.status || 'pending';
+            return { order, sellerItems, orderStatus };
+        })
+        .filter(item => item !== null); // Remove null entries
     
     const sortedOrders = [...ordersWithSellerItems].sort((a, b) => {
         const orderA = statusOrder[a.orderStatus] || 99;
         const orderB = statusOrder[b.orderStatus] || 99;
         
         if (orderA === orderB) {
-            return new Date(b.order.created_at) - new Date(a.order.created_at);
+            const dateA = a.order && a.order.created_at ? new Date(a.order.created_at) : new Date(0);
+            const dateB = b.order && b.order.created_at ? new Date(b.order.created_at) : new Date(0);
+            return dateB - dateA;
         }
         return orderA - orderB;
     });
