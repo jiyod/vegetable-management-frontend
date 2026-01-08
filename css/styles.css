@@ -857,3 +857,30 @@ header h1 {
     z-index: 100003 !important;
     position: relative !important;
 }
+
+/* Ensure forgot password modal buttons have visible text */
+#forgot-password-modal .btn-primary {
+    color: white !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-indent: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#forgot-password-modal button[type="submit"] {
+    color: white !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-indent: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
