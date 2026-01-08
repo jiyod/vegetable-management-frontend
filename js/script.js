@@ -48,6 +48,8 @@ const forgotPasswordRequestForm = document.getElementById('forgot-password-reque
 const forgotPasswordResetForm = document.getElementById('forgot-password-reset-form');
 const forgotStepRequest = document.getElementById('forgot-step-request');
 const forgotStepReset = document.getElementById('forgot-step-reset');
+const forgotStepToken = document.getElementById('forgot-step-token');
+const forgotPasswordTokenForm = document.getElementById('forgot-password-token-form');
 
 // Vegetable elements
 const addVegetableBtn = document.getElementById('add-vegetable-btn');
@@ -118,6 +120,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initializeApp() {
     console.log('🚀 Initializing Laravel app...');
+    
+    // Check for reset token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset-token');
+    
+    if (resetToken) {
+        // Show auth section first
+        showAuthSection();
+        // Open forgot password modal with token form after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            openForgotPasswordModalWithToken(resetToken);
+        }, 100);
+        // Clean URL but keep hash if present
+        const newUrl = window.location.pathname + (window.location.hash || '');
+        window.history.replaceState({}, document.title, newUrl);
+        return;
+    }
     
     // First, try to load user data from localStorage
     const storedUser = localStorage.getItem('currentUser');
@@ -412,6 +431,10 @@ function setupEventListeners() {
     if (forgotPasswordResetForm) {
         forgotPasswordResetForm.addEventListener('submit', handleForgotPasswordReset);
     }
+    
+    if (forgotPasswordTokenForm) {
+        forgotPasswordTokenForm.addEventListener('submit', handleForgotPasswordResetWithToken);
+    }
 
     // Confirm modal event listeners
     const confirmModal = document.getElementById('confirm-modal');
@@ -476,6 +499,13 @@ async function handleLogin(e) {
         currentUser = data.user;
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
+        
+        // Clear saved address for new user login
+        if (currentUser && currentUser.id) {
+            localStorage.removeItem(`lastShippingAddress_${currentUser.id}`);
+            localStorage.removeItem('lastShippingAddress');
+        }
+        
         showSuccessMessage('Login successful!');
         
         // Show appropriate section based on user role
@@ -520,6 +550,18 @@ async function handleRegister(e) {
         let message = data.message || 'Registration successful! Please check your email and click the verification link to complete your registration.';
         if (role === 'seller') {
             message += ' Your seller account will be reviewed by an admin for approval.';
+        }
+        
+        // Clear saved address for new customer accounts
+        if (role === 'customer') {
+            localStorage.removeItem('lastShippingAddress');
+            // Also clear any user-specific addresses (in case user ID was set)
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+                if (key.startsWith('lastShippingAddress_')) {
+                    localStorage.removeItem(key);
+                }
+            });
         }
         
         showSuccessMessage(message);
@@ -690,11 +732,42 @@ function openForgotPasswordModal() {
         if (forgotPasswordResetForm) {
             forgotPasswordResetForm.reset();
         }
-        if (forgotStepRequest && forgotStepReset) {
+        if (forgotPasswordTokenForm) {
+            forgotPasswordTokenForm.reset();
+        }
+        if (forgotStepRequest && forgotStepReset && forgotStepToken) {
             forgotStepRequest.classList.remove('hidden');
             forgotStepReset.classList.add('hidden');
+            forgotStepToken.classList.add('hidden');
         }
+        // Clear reset token if any
+        window.resetToken = null;
 
+        forgotPasswordModal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+    }
+}
+
+function openForgotPasswordModalWithToken(token) {
+    if (forgotPasswordModal) {
+        // Store token for later use
+        window.resetToken = token;
+        
+        // Reset forms and show token step
+        if (forgotPasswordRequestForm) {
+            forgotPasswordRequestForm.reset();
+        }
+        if (forgotPasswordResetForm) {
+            forgotPasswordResetForm.reset();
+        }
+        if (forgotPasswordTokenForm) {
+            forgotPasswordTokenForm.reset();
+        }
+        if (forgotStepRequest && forgotStepReset && forgotStepToken) {
+            forgotStepRequest.classList.add('hidden');
+            forgotStepReset.classList.add('hidden');
+            forgotStepToken.classList.remove('hidden');
+        }
         forgotPasswordModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
     }
@@ -797,6 +870,51 @@ async function handleForgotPasswordReset(e) {
         closeForgotPasswordModal();
     } catch (error) {
         console.error('Forgot password reset error:', error);
+        if (error.response) {
+            const data = error.response.data;
+            showErrorMessage(data.error?.description || data.error || 'Failed to reset password');
+        } else {
+            showErrorMessage('Network error. Please try again.');
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
+async function handleForgotPasswordResetWithToken(e) {
+    e.preventDefault();
+    showLoading();
+
+    const token = window.resetToken;
+    const password = document.getElementById('forgot-token-password').value;
+    const passwordConfirm = document.getElementById('forgot-token-password-confirm').value;
+
+    if (!token) {
+        showErrorMessage('Invalid reset token. Please request a new reset link.');
+        hideLoading();
+        return;
+    }
+
+    if (password !== passwordConfirm) {
+        showErrorMessage('Passwords do not match');
+        hideLoading();
+        return;
+    }
+
+    try {
+        const response = await axios.post('/reset-password', {
+            token: token,
+            password: password,
+            password_confirmation: passwordConfirm,
+        });
+        const data = response.data;
+
+        showSuccessMessage(data.message || 'Password has been reset. You can now login with your new password.');
+        closeForgotPasswordModal();
+        // Clear token
+        window.resetToken = null;
+    } catch (error) {
+        console.error('Forgot password reset with token error:', error);
         if (error.response) {
             const data = error.response.data;
             showErrorMessage(data.error?.description || data.error || 'Failed to reset password');
@@ -2481,7 +2599,10 @@ async function handleQuantitySubmit(e) {
         
         // Close modal only after successful response
         closeQuantityModal();
-        showSuccessMessage(`${pendingAddToCart.productName} (${quantity} kg) added to cart!`);
+        
+        // Get product name from response if available, otherwise use pendingAddToCart
+        const productName = response.data?.product?.name || pendingAddToCart?.productName || 'Product';
+        showSuccessMessage(`${productName} (${quantity} kg) added to cart!`);
         await loadCart(); // Refresh cart to update badge
         hideLoading();
     } catch (error) {
@@ -2701,7 +2822,15 @@ function openCheckoutModal() {
 // Load saved address from localStorage and pre-fill the form
 function loadSavedAddress() {
     try {
-        const savedAddressData = localStorage.getItem('lastShippingAddress');
+        // Use user-specific key for address retention
+        const userId = currentUser ? currentUser.id : null;
+        if (!userId) {
+            const savedAddressNotice = document.getElementById('saved-address-notice');
+            if (savedAddressNotice) savedAddressNotice.style.display = 'none';
+            return;
+        }
+        
+        const savedAddressData = localStorage.getItem(`lastShippingAddress_${userId}`);
         const savedAddressNotice = document.getElementById('saved-address-notice');
         
         if (savedAddressData) {
@@ -2742,7 +2871,13 @@ function loadSavedAddress() {
 
 // Clear saved address
 function clearSavedAddress() {
-    localStorage.removeItem('lastShippingAddress');
+    // Use user-specific key for address retention
+    const userId = currentUser ? currentUser.id : null;
+    if (userId) {
+        localStorage.removeItem(`lastShippingAddress_${userId}`);
+    } else {
+        localStorage.removeItem('lastShippingAddress');
+    }
     const savedAddressNotice = document.getElementById('saved-address-notice');
     if (savedAddressNotice) savedAddressNotice.style.display = 'none';
     
@@ -2906,13 +3041,16 @@ async function handleCheckout(e) {
             notes: notes || null
         });
         
-        // Save address to localStorage for future orders
-        const savedAddress = {
-            barangay: barangay,
-            address: address,
-            notes: notes || ''
-        };
-        localStorage.setItem('lastShippingAddress', JSON.stringify(savedAddress));
+        // Save address to localStorage for future orders (per user)
+        const userId = currentUser ? currentUser.id : null;
+        if (userId) {
+            const savedAddress = {
+                barangay: barangay,
+                address: address,
+                notes: notes || ''
+            };
+            localStorage.setItem(`lastShippingAddress_${userId}`, JSON.stringify(savedAddress));
+        }
         
         const data = response.data;
         const ordersCount = data.orders ? data.orders.length : 1;
@@ -3304,7 +3442,40 @@ function displaySellerOrders(orders) {
         return;
     }
     
-    container.innerHTML = orders.map(order => {
+    // Sort orders by status then by created_at desc (same as customer orders)
+    // For seller orders, sort by the highest priority item status within each order
+    const statusOrder = {
+        'pending': 1,
+        'approved': 2,
+        'rejected': 3,
+        'processing': 4,
+        'shipped': 5,
+        'delivered': 6,
+        'cancelled': 7,
+        'refunded': 8
+    };
+    
+    const sortedOrders = [...orders].sort((a, b) => {
+        // Get the highest priority item status for each order
+        const getOrderPriority = (order) => {
+            if (order.items && order.items.length > 0) {
+                // Get the highest priority status from items
+                const itemPriorities = order.items.map(item => statusOrder[item.status] || 99);
+                return Math.min(...itemPriorities);
+            }
+            return statusOrder[order.status] || 99;
+        };
+        
+        const orderA = getOrderPriority(a);
+        const orderB = getOrderPriority(b);
+        
+        if (orderA === orderB) {
+            return new Date(b.created_at) - new Date(a.created_at);
+        }
+        return orderA - orderB;
+    });
+    
+    container.innerHTML = sortedOrders.map(order => {
         // Filter items to only show this seller's items (backend should already filter, but double-check)
         const sellerItems = order.items.filter(item => {
             return item.seller && item.seller.id === currentUser.id;
