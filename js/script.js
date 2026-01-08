@@ -3124,12 +3124,22 @@ let ordersData = [];
 async function loadOrders() {
     if (!currentUser || currentUser.role !== 'customer') return;
     
+    const container = document.getElementById('orders-container');
+    if (container) {
+        // Show loading state in container immediately
+        container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+    }
+    
     try {
         showLoading();
         const response = await axios.get('/orders');
         ordersData = response.data;
-        displayOrders(ordersData);
+        
+        // Hide loading immediately after data is received
         hideLoading();
+        
+        // Display orders (this should be fast now)
+        displayOrders(ordersData);
     } catch (error) {
         console.error('Load orders error:', error);
         hideLoading();
@@ -3137,6 +3147,9 @@ async function loadOrders() {
             handleInvalidToken();
         } else {
             showErrorMessage('Failed to load orders. Please try again.');
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Failed to load orders. Please try again.</p>';
+            }
         }
     }
 }
