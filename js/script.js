@@ -768,6 +768,14 @@ function openForgotPasswordModalWithToken(token) {
             forgotStepReset.classList.add('hidden');
             forgotStepToken.classList.remove('hidden');
         }
+        
+        // Ensure event listener is attached (in case modal opens before DOM is fully ready)
+        const tokenForm = document.getElementById('forgot-password-token-form');
+        if (tokenForm && !tokenForm.hasAttribute('data-listener-attached')) {
+            tokenForm.addEventListener('submit', handleForgotPasswordResetWithToken);
+            tokenForm.setAttribute('data-listener-attached', 'true');
+        }
+        
         forgotPasswordModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
     }

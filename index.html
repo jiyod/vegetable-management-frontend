@@ -143,6 +143,24 @@
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Reset Password</button>
                     </form>
                 </div>
+
+                <!-- Step 3: Reset password with token (from link) -->
+                <div id="forgot-step-token" class="hidden">
+                    <p style="font-size: 14px; color: #4a5568; margin-bottom: 10px;">
+                        Enter your new password below to reset your password.
+                    </p>
+                    <form id="forgot-password-token-form">
+                        <div class="form-group">
+                            <label for="forgot-token-password">New Password</label>
+                            <input type="password" id="forgot-token-password" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="forgot-token-password-confirm">Confirm New Password</label>
+                            <input type="password" id="forgot-token-password-confirm" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 16px; font-weight: 600; cursor: pointer; z-index: 10; position: relative;">Reset Password</button>
+                    </form>
+                </div>
             </div>
         </div>
 
