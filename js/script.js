@@ -938,6 +938,7 @@ async function handleForgotPasswordResetWithToken(e) {
 window.closeProfileModal = closeProfileModal;
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderItemStatus = updateOrderItemStatus;
+window.updateOrderStatus = updateOrderStatus;
 window.cancelOrder = cancelOrder;
 
 async function checkAuthStatus() {
@@ -3518,7 +3519,8 @@ function displaySellerOrders(orders) {
         });
         const orderTotal = sellerItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
         
-        const itemsHtml = sellerItems.map(item => {
+        // Get the order-level status (all items should have the same status for approval/rejection)
+        const orderStatus = sellerItems.length > 0 ? sellerItems[0].status : 'pending';
         const statusColors = {
             'pending': '#f59e0b',
             'approved': '#3b82f6',
@@ -3527,55 +3529,50 @@ function displaySellerOrders(orders) {
             'delivered': '#10b981',
             'cancelled': '#ef4444'
         };
-            const statusColor = statusColors[item.status] || '#718096';
-            
-            // Determine which buttons to show based on status
-            let actionButtons = '';
-            if (item.status === 'pending') {
-                actionButtons = `
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'approved', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-success" style="padding: 8px 16px; font-size: 12px; flex: 1;">
-                            ✓ Approve Order
-                        </button>
-                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'rejected', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-danger" style="padding: 8px 16px; font-size: 12px; flex: 1;">
-                            ✗ Reject
-                        </button>
-                    </div>
-                `;
-            } else if (item.status === 'approved') {
-                actionButtons = `
-                    <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'processing', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; flex: 1;">
-                            Start Processing
-                        </button>
-                    </div>
-                `;
-            } else if (item.status === 'processing') {
-                actionButtons = `
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'delivered', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-success" style="padding: 8px 16px; font-size: 12px; flex: 1;">
-                            Mark as Delivered
-                        </button>
-                    </div>
-                `;
-            }
-            
+        const orderStatusColor = statusColors[orderStatus] || '#718096';
+        
+        // Order-level action buttons (approve/reject entire order)
+        let orderActionButtons = '';
+        if (orderStatus === 'pending') {
+            orderActionButtons = `
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <button onclick="updateOrderStatus(${order.id}, 'approved')" class="btn btn-success" style="padding: 12px 24px; font-size: 14px; flex: 1;">
+                        ✓ Approve Order
+                    </button>
+                    <button onclick="updateOrderStatus(${order.id}, 'rejected')" class="btn btn-danger" style="padding: 12px 24px; font-size: 14px; flex: 1;">
+                        ✗ Reject Order
+                    </button>
+                </div>
+            `;
+        } else if (orderStatus === 'approved') {
+            orderActionButtons = `
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <button onclick="updateOrderStatus(${order.id}, 'processing')" class="btn btn-primary" style="padding: 12px 24px; font-size: 14px; flex: 1;">
+                        Start Processing Order
+                    </button>
+                </div>
+            `;
+        } else if (orderStatus === 'processing') {
+            orderActionButtons = `
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <button onclick="updateOrderStatus(${order.id}, 'delivered')" class="btn btn-success" style="padding: 12px 24px; font-size: 14px; flex: 1;">
+                        Mark Order as Delivered
+                    </button>
+                </div>
+            `;
+        }
+        
+        const itemsHtml = sellerItems.map(item => {
             return `
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${statusColor};">
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${orderStatusColor};">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
                             <h4 style="margin: 0 0 8px 0; color: #1a202c; font-size: 16px;">${item.product ? item.product.name : 'Unknown Product'}</h4>
                             <p style="margin: 4px 0; color: #718096; font-size: 14px;">Quantity: <strong>${parseFloat(item.quantity).toFixed(2)} kg</strong></p>
                             <p style="margin: 4px 0; color: #718096; font-size: 14px;">Price: ₱${parseFloat(item.price).toFixed(2)} per kg</p>
-                            ${actionButtons}
                             <p style="margin: 8px 0 0 0; color: #1a202c; font-weight: 600; font-size: 15px;">Subtotal: ₱${parseFloat(item.subtotal).toFixed(2)}</p>
                         </div>
                         <div style="text-align: right; min-width: 150px;">
-                            <div style="margin-bottom: 10px;">
-                                <span style="padding: 6px 12px; background: ${statusColor}; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: capitalize; display: inline-block;">
-                                    ${item.status}
-                                </span>
-                            </div>
                             ${item.status === 'delivered' ? `
                                 <span style="color: #10b981; font-size: 12px; font-weight: 600;">✓ Delivered</span>
                             ` : ''}
@@ -3605,6 +3602,15 @@ function displaySellerOrders(orders) {
                         ${order.shipping_country}
                     </p>
                 </div>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: #4a5568; font-size: 16px;">Order Status:</h4>
+                        <span style="padding: 8px 16px; background: ${orderStatusColor}; color: white; border-radius: 6px; font-size: 14px; font-weight: 600; text-transform: capitalize;">
+                            ${orderStatus}
+                        </span>
+                    </div>
+                    ${orderActionButtons}
+                </div>
                 <div>
                     <h4 style="margin: 0 0 10px 0; color: #4a5568; font-size: 16px;">Items:</h4>
                     ${itemsHtml}
@@ -3614,6 +3620,43 @@ function displaySellerOrders(orders) {
     }).join('');
 }
 
+// Update entire order status (all items in the order)
+async function updateOrderStatus(orderId, newStatus) {
+    try {
+        showLoading();
+        
+        const response = await axios.put(`/seller/orders/${orderId}/items/status`, {
+            status: newStatus
+        });
+        
+        const statusMessages = {
+            'approved': 'Order approved successfully!',
+            'rejected': 'Order rejected successfully!',
+            'processing': 'Order marked as processing!',
+            'delivered': 'Order marked as delivered!'
+        };
+        
+        const successMessage = statusMessages[newStatus] || `Order status updated to ${newStatus} successfully!`;
+        showSuccessMessage(successMessage);
+        await loadSellerOrders(); // Refresh orders
+    } catch (error) {
+        console.error('Failed to update order status:', error);
+        if (error.response) {
+            const data = error.response.data;
+            if (error.response.status === 401) {
+                handleInvalidToken();
+            } else {
+                showErrorMessage(data.error?.description || 'Failed to update order status');
+            }
+        } else {
+            showErrorMessage('Network error. Please try again.');
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
+// Keep this function for backward compatibility, but it should not be used for approval/rejection
 async function updateOrderItemStatus(orderId, itemId, newStatus, productName = '') {
     try {
         showLoading();
