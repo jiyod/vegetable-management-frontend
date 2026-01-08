@@ -3154,10 +3154,9 @@ function displayOrders(orders) {
         'pending': 1,
         'approved': 2,
         'processing': 3,
-        'shipped': 4,
-        'delivered': 5,
-        'cancelled': 6,
-        'refunded': 7
+        'delivered': 4,
+        'cancelled': 5,
+        'refunded': 6
     };
     const sortedOrders = [...orders].sort((a, b) => {
         const orderA = statusOrder[a.status] || 99;
@@ -3257,7 +3256,6 @@ function displayOrderDetails(order) {
         'rejected': '#ef4444',
         'confirmed': '#3b82f6',
         'processing': '#8b5cf6',
-        'shipped': '#6366f1',
         'delivered': '#10b981',
         'cancelled': '#ef4444',
         'refunded': '#6b7280'
@@ -3366,12 +3364,12 @@ function canCancelOrder(order) {
     const cancellableStatuses = ['pending', 'confirmed'];
     if (!cancellableStatuses.includes(order.status)) return false;
     
-    // Check if any items are already shipped or delivered
+    // Check if any items are already delivered
     if (order.items && order.items.length > 0) {
-        const hasShippedItems = order.items.some(item => 
-            ['shipped', 'delivered'].includes(item.status)
+        const hasDeliveredItems = order.items.some(item => 
+            item.status === 'delivered'
         );
-        if (hasShippedItems) return false;
+        if (hasDeliveredItems) return false;
     }
     
     return true;
@@ -3488,10 +3486,9 @@ function displaySellerOrders(orders) {
         'approved': 2,
         'rejected': 3,
         'processing': 4,
-        'shipped': 5,
-        'delivered': 6,
-        'cancelled': 7,
-        'refunded': 8
+        'delivered': 5,
+        'cancelled': 6,
+        'refunded': 7
     };
     
     const sortedOrders = [...orders].sort((a, b) => {
@@ -3527,7 +3524,6 @@ function displaySellerOrders(orders) {
             'approved': '#3b82f6',
             'rejected': '#ef4444',
             'processing': '#8b5cf6',
-            'shipped': '#6366f1',
             'delivered': '#10b981',
             'cancelled': '#ef4444'
         };
@@ -3555,14 +3551,6 @@ function displaySellerOrders(orders) {
                     </div>
                 `;
             } else if (item.status === 'processing') {
-                actionButtons = `
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'shipped', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; flex: 1;">
-                            Mark as Shipped
-                        </button>
-                    </div>
-                `;
-            } else if (item.status === 'shipped') {
                 actionButtons = `
                     <div style="display: flex; gap: 8px; margin-top: 8px;">
                         <button onclick="updateOrderItemStatus(${order.id}, ${item.id}, 'delivered', '${(item.product ? item.product.name : 'Unknown Product').replace(/'/g, "\\'")}')" class="btn btn-success" style="padding: 8px 16px; font-size: 12px; flex: 1;">
