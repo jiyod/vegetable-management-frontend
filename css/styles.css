@@ -859,28 +859,48 @@ header h1 {
 }
 
 /* Ensure forgot password modal buttons have visible text */
-#forgot-password-modal .btn-primary {
+#forgot-password-modal .btn-primary,
+#forgot-password-modal button[type="submit"].btn-primary,
+#forgot-password-modal button.btn-primary {
     color: white !important;
     text-align: center !important;
     font-weight: 600 !important;
     line-height: 1.5 !important;
-    white-space: nowrap !important;
+    white-space: normal !important;
     overflow: visible !important;
     text-indent: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
 }
 
-#forgot-password-modal button[type="submit"] {
+#forgot-password-modal .btn-primary::before,
+#forgot-password-modal .btn-primary::after,
+#forgot-password-modal button[type="submit"]::before,
+#forgot-password-modal button[type="submit"]::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Ensure button text content is visible */
+#forgot-password-modal .btn-primary * {
     color: white !important;
-    text-align: center !important;
-    font-weight: 600 !important;
-    line-height: 1.5 !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-indent: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Force button to show text - override any conflicting styles */
+#forgot-password-modal form button.btn-primary {
+    min-height: 44px !important;
+    height: auto !important;
+    color: white !important;
+    -webkit-text-fill-color: white !important;
+    text-fill-color: white !important;
+}
+
+#forgot-password-modal form button.btn-primary:not(:empty)::before {
+    display: none !important;
+    content: '' !important;
 }
