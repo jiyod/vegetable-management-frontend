@@ -3451,7 +3451,20 @@ async function loadSellerOrders() {
         showLoading();
         const response = await axios.get('/seller/orders/all');
         const orders = response.data;
-        displaySellerOrders(orders);
+        
+        // Ensure orders is an array
+        if (!Array.isArray(orders)) {
+            console.error('Invalid orders data format:', orders);
+            showErrorMessage('Invalid orders data received from server');
+            return;
+        }
+        
+        try {
+            displaySellerOrders(orders);
+        } catch (displayError) {
+            console.error('Error displaying seller orders:', displayError);
+            showErrorMessage('Error displaying orders. Please refresh the page.');
+        }
     } catch (error) {
         console.error('Failed to load seller orders:', error);
         if (error.response) {
@@ -3473,6 +3486,13 @@ function displaySellerOrders(orders) {
     const container = document.getElementById('seller-orders-container');
     if (!container) return;
     
+    // Validate orders array
+    if (!Array.isArray(orders)) {
+        console.error('displaySellerOrders: orders is not an array:', orders);
+        container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Error: Invalid orders data format.</p>';
+        return;
+    }
+    
     if (!orders || orders.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">No orders yet.</p>';
         return;
@@ -3492,9 +3512,9 @@ function displaySellerOrders(orders) {
     // First, filter and get seller items for each order to determine status
     const ordersWithSellerItems = orders
         .map(order => {
-            if (!order || !order.items) return null;
+            if (!order || !order.items || !Array.isArray(order.items)) return null;
             const sellerItems = order.items.filter(item => {
-                return item.seller && item.seller.id === currentUser.id;
+                return item && item.seller && item.seller.id === currentUser.id;
             });
             // Only include orders that have seller items
             if (sellerItems.length === 0) return null;
@@ -3502,16 +3522,26 @@ function displaySellerOrders(orders) {
             const orderStatus = sellerItems[0].status || order.status || 'pending';
             return { order, sellerItems, orderStatus };
         })
-        .filter(item => item !== null); // Remove null entries
+        .filter(item => item !== null && item.order); // Remove null entries and ensure order exists
     
     const sortedOrders = [...ordersWithSellerItems].sort((a, b) => {
+        // Safety checks
+        if (!a || !b || !a.order || !b.order) {
+            return 0; // Keep order if data is invalid
+        }
+        
         const orderA = statusOrder[a.orderStatus] || 99;
         const orderB = statusOrder[b.orderStatus] || 99;
         
         if (orderA === orderB) {
-            const dateA = a.order && a.order.created_at ? new Date(a.order.created_at) : new Date(0);
-            const dateB = b.order && b.order.created_at ? new Date(b.order.created_at) : new Date(0);
-            return dateB - dateA;
+            try {
+                const dateA = a.order.created_at ? new Date(a.order.created_at) : new Date(0);
+                const dateB = b.order.created_at ? new Date(b.order.created_at) : new Date(0);
+                return dateB - dateA;
+            } catch (dateError) {
+                console.error('Error comparing dates:', dateError, { a: a.order, b: b.order });
+                return 0;
+            }
         }
         return orderA - orderB;
     });
