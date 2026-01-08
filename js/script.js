@@ -1734,8 +1734,39 @@ function showAuthSection() {
         adminSection.classList.add('hidden');
         adminSection.style.display = 'none';
     }
+    // Hide seller orders section
+    const sellerOrdersSection = document.getElementById('seller-orders-section');
+    if (sellerOrdersSection) {
+        sellerOrdersSection.classList.add('hidden');
+        sellerOrdersSection.style.display = 'none';
+    }
+    // Hide customer sellers section
+    const customerSellersSection = document.getElementById('customer-sellers-section');
+    if (customerSellersSection) {
+        customerSellersSection.classList.add('hidden');
+        customerSellersSection.style.display = 'none';
+    }
+    // Hide orders container
+    const ordersContainer = document.getElementById('orders-container');
+    if (ordersContainer) {
+        ordersContainer.style.display = 'none';
+    }
+    // Hide cart section if it exists
+    const cartSection = document.getElementById('cart-section');
+    if (cartSection) {
+        cartSection.style.display = 'none';
+    }
     // Hide user info
     if (userInfo) userInfo.classList.add('hidden');
+    
+    // Close any open modals
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    });
+    document.body.classList.remove('modal-open');
 }
 
 function showVegetableSection() {
