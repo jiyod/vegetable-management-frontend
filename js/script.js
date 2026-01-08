@@ -3156,8 +3156,7 @@ function displayOrders(orders) {
         'approved': 2,
         'processing': 3,
         'delivered': 4,
-        'cancelled': 5,
-        'refunded': 6
+        'cancelled': 5
     };
     const sortedOrders = [...orders].sort((a, b) => {
         const orderA = statusOrder[a.status] || 99;
@@ -3258,8 +3257,7 @@ function displayOrderDetails(order) {
         'confirmed': '#3b82f6',
         'processing': '#8b5cf6',
         'delivered': '#10b981',
-        'cancelled': '#ef4444',
-        'refunded': '#6b7280'
+        'cancelled': '#ef4444'
     };
     
     const statusColor = statusColors[order.status] || '#6b7280';
@@ -3488,39 +3486,31 @@ function displaySellerOrders(orders) {
         'rejected': 3,
         'processing': 4,
         'delivered': 5,
-        'cancelled': 6,
-        'refunded': 7
+        'cancelled': 6
     };
     
-    const sortedOrders = [...orders].sort((a, b) => {
-        // Get the highest priority item status for each order
-        const getOrderPriority = (order) => {
-            if (order.items && order.items.length > 0) {
-                // Get the highest priority status from items
-                const itemPriorities = order.items.map(item => statusOrder[item.status] || 99);
-                return Math.min(...itemPriorities);
-            }
-            return statusOrder[order.status] || 99;
-        };
-        
-        const orderA = getOrderPriority(a);
-        const orderB = getOrderPriority(b);
+    // First, filter and get seller items for each order to determine status
+    const ordersWithSellerItems = orders.map(order => {
+        const sellerItems = order.items.filter(item => {
+            return item.seller && item.seller.id === currentUser.id;
+        });
+        // Get order status from seller items (all items should have same status since approval is per order)
+        const orderStatus = sellerItems.length > 0 ? sellerItems[0].status : order.status;
+        return { ...order, sellerItems, orderStatus };
+    });
+    
+    const sortedOrders = [...ordersWithSellerItems].sort((a, b) => {
+        const orderA = statusOrder[a.orderStatus] || 99;
+        const orderB = statusOrder[b.orderStatus] || 99;
         
         if (orderA === orderB) {
-            return new Date(b.created_at) - new Date(a.created_at);
+            return new Date(b.order.created_at) - new Date(a.order.created_at);
         }
         return orderA - orderB;
     });
     
-    container.innerHTML = sortedOrders.map(order => {
-        // Filter items to only show this seller's items (backend should already filter, but double-check)
-        const sellerItems = order.items.filter(item => {
-            return item.seller && item.seller.id === currentUser.id;
-        });
+    container.innerHTML = sortedOrders.map(({ order, sellerItems, orderStatus }) => {
         const orderTotal = sellerItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
-        
-        // Get the order-level status (all items should have the same status for approval/rejection)
-        const orderStatus = sellerItems.length > 0 ? sellerItems[0].status : 'pending';
         const statusColors = {
             'pending': '#f59e0b',
             'approved': '#3b82f6',
