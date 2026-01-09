@@ -3841,7 +3841,16 @@ async function updateOrderStatus(orderId, newStatus) {
         
         const successMessage = statusMessages[newStatus] || `Order status updated to ${newStatus} successfully!`;
         showSuccessMessage(successMessage);
-        await loadSellerOrders(); // Refresh orders
+        
+        // Refresh orders to show updated status
+        await loadSellerOrders();
+        
+        // Refresh vegetables list to show updated stock quantities
+        // This is especially important when approving orders (stock is deducted)
+        // or cancelling approved orders (stock is restored)
+        if (newStatus === 'approved' || newStatus === 'cancelled') {
+            await loadVegetables();
+        }
     } catch (error) {
         console.error('Failed to update order status:', error);
         if (error.response) {
