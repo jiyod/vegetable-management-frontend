@@ -859,10 +859,10 @@ header h1 {
 }
 
 /* Ensure forgot password modal buttons have visible text */
-#forgot-password-modal .btn-primary,
-#forgot-password-modal button[type="submit"].btn-primary,
-#forgot-password-modal button.btn-primary {
-    color: white !important;
+#forgot-password-modal .forgot-password-btn,
+#forgot-password-modal button.forgot-password-btn,
+#forgot-password-modal .btn-primary.forgot-password-btn {
+    color: #ffffff !important;
     text-align: center !important;
     font-weight: 600 !important;
     font-size: 16px !important;
@@ -870,57 +870,40 @@ header h1 {
     white-space: normal !important;
     overflow: visible !important;
     text-indent: 0 !important;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
     opacity: 1 !important;
     visibility: visible !important;
     display: block !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    -webkit-text-fill-color: white !important;
-    text-fill-color: white !important;
+    -webkit-text-fill-color: #ffffff !important;
+    text-fill-color: #ffffff !important;
     position: relative !important;
     z-index: 10 !important;
+    border: none !important;
+    min-height: 44px !important;
 }
 
-#forgot-password-modal .btn-primary::before,
-#forgot-password-modal .btn-primary::after,
-#forgot-password-modal button[type="submit"]::before,
-#forgot-password-modal button[type="submit"]::after {
+/* Remove any pseudo-elements that might hide text */
+#forgot-password-modal .forgot-password-btn::before,
+#forgot-password-modal .forgot-password-btn::after {
     display: none !important;
     content: '' !important;
+    background: none !important;
 }
 
-/* Ensure button text content is visible */
-#forgot-password-modal .btn-primary * {
-    color: white !important;
+/* Ensure all text inside button is visible */
+#forgot-password-modal .forgot-password-btn * {
+    color: #ffffff !important;
     visibility: visible !important;
     opacity: 1 !important;
     font-size: 16px !important;
+    -webkit-text-fill-color: #ffffff !important;
+    text-fill-color: #ffffff !important;
 }
 
-/* Force button to show text - override any conflicting styles */
-#forgot-password-modal form button.btn-primary {
-    min-height: 44px !important;
-    height: auto !important;
-    color: white !important;
-    -webkit-text-fill-color: white !important;
-    text-fill-color: white !important;
-    font-size: 16px !important;
-}
-
-#forgot-password-modal form button.btn-primary:not(:empty)::before {
-    display: none !important;
-    content: '' !important;
-}
-
-/* Ensure text nodes are visible */
-#forgot-password-modal button.btn-primary {
-    font-size: 16px !important;
+/* Override any conflicting button styles */
+#forgot-password-modal form .forgot-password-btn {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-}
-
-#forgot-password-modal button.btn-primary span,
-#forgot-password-modal button.btn-primary::text {
-    color: white !important;
-    visibility: visible !important;
+    text-fill-color: #ffffff !important;
 }
