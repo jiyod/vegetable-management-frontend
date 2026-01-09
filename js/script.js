@@ -354,7 +354,7 @@ function setupEventListeners() {
     // Orders button
     const ordersBtn = document.getElementById('orders-btn');
     if (ordersBtn) {
-        ordersBtn.addEventListener('click', () => {
+        ordersBtn.addEventListener('click', async () => {
             // Ensure currentUser is loaded before loading orders
             if (!currentUser) {
                 const storedUser = localStorage.getItem('currentUser');
@@ -363,14 +363,26 @@ function setupEventListeners() {
                         currentUser = JSON.parse(storedUser);
                     } catch (e) {
                         console.error('Error parsing currentUser:', e);
+                        showErrorMessage('Failed to load user data. Please refresh the page.');
+                        return;
                     }
+                } else {
+                    showErrorMessage('User not found. Please login again.');
+                    return;
                 }
             }
+            
+            // Open modal first and show loading state
             openOrdersModal();
-            // Load orders after modal is opened
-            setTimeout(() => {
-                loadOrders();
-            }, 100);
+            
+            // Set loading state in container immediately
+            const container = document.getElementById('orders-container');
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            }
+            
+            // Load orders and wait for completion
+            await loadOrders();
         });
     }
     
@@ -3142,6 +3154,8 @@ async function handleCheckout(e) {
 let ordersData = [];
 
 async function loadOrders() {
+    const container = document.getElementById('orders-container');
+    
     // Ensure currentUser is loaded
     if (!currentUser) {
         const storedUser = localStorage.getItem('currentUser');
@@ -3150,16 +3164,26 @@ async function loadOrders() {
                 currentUser = JSON.parse(storedUser);
             } catch (e) {
                 console.error('Error parsing currentUser:', e);
+                if (container) {
+                    container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Error loading user data. Please refresh the page.</p>';
+                }
                 return;
             }
         } else {
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">User not found. Please login again.</p>';
+            }
             return;
         }
     }
     
-    if (currentUser.role !== 'customer') return;
+    if (currentUser.role !== 'customer') {
+        if (container) {
+            container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Only customers can view orders.</p>';
+        }
+        return;
+    }
     
-    const container = document.getElementById('orders-container');
     if (container) {
         // Show loading state in container immediately
         container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
@@ -3180,6 +3204,9 @@ async function loadOrders() {
         hideLoading();
         if (error.response && error.response.status === 401) {
             handleInvalidToken();
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Session expired. Please login again.</p>';
+            }
         } else {
             showErrorMessage('Failed to load orders. Please try again.');
             if (container) {
@@ -3466,6 +3493,12 @@ function openOrdersModal() {
     if (ordersModal) {
         ordersModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
+        
+        // Ensure container shows loading state if empty
+        const container = document.getElementById('orders-container');
+        if (container && (!container.innerHTML || container.innerHTML.trim() === '')) {
+            container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+        }
     }
 }
 
