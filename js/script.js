@@ -372,48 +372,16 @@ function setupEventListeners() {
                 }
             }
             
-            // Get modal and container references
-            const ordersModal = document.getElementById('orders-modal');
-            const container = document.getElementById('orders-container');
-            
-            if (!ordersModal || !container) {
-                console.error('Orders modal or container not found');
-                showErrorMessage('Failed to open orders modal. Please refresh the page.');
-                return;
-            }
-            
-            // Set loading state IMMEDIATELY before any other operations
-            const loadingHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
-            container.innerHTML = loadingHTML;
-            
-            // Remove hidden class to show modal
-            ordersModal.classList.remove('hidden');
-            document.body.classList.add('modal-open');
-            
-            // Multiple safeguards to ensure loading state is visible
-            // 1. After modal is shown
-            setTimeout(() => {
-                if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--'))) {
-                    container.innerHTML = loadingHTML;
-                }
-            }, 10);
-            
-            // 2. After next frame
-            requestAnimationFrame(() => {
-                if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--'))) {
-                    container.innerHTML = loadingHTML;
-                }
-            });
-            
-            // 3. After a short delay
-            setTimeout(() => {
-                if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--'))) {
-                    container.innerHTML = loadingHTML;
-                }
-            }, 50);
-            
-            // Load orders and wait for completion
-            await loadOrders();
+            // Show customer orders section (inline, like seller side)
+            showCustomerOrdersSection();
+        });
+    }
+    
+    // Back to Vegetables button for customers
+    const customerBackBtn = document.getElementById('customer-back-to-vegetables-btn');
+    if (customerBackBtn) {
+        customerBackBtn.addEventListener('click', () => {
+            hideCustomerOrdersSection();
         });
     }
     
@@ -3564,44 +3532,39 @@ function cancelOrder(orderId) {
     );
 }
 
-function openOrdersModal() {
-    const ordersModal = document.getElementById('orders-modal');
+function showCustomerOrdersSection() {
+    const customerOrdersSection = document.getElementById('customer-orders-section');
+    const vegetableSection = document.getElementById('vegetable-section');
     const container = document.getElementById('orders-container');
     
-    if (ordersModal) {
-        // Ensure container shows loading state
+    if (customerOrdersSection && vegetableSection) {
+        // Hide vegetable section
+        vegetableSection.classList.add('hidden');
+        vegetableSection.style.display = 'none';
+        
+        // Show customer orders section
+        customerOrdersSection.classList.remove('hidden');
+        customerOrdersSection.style.display = 'block';
+        
+        // Set loading state
         if (container) {
-            // Check if container is empty or only has comment
-            const hasContent = container.innerHTML && 
-                               container.innerHTML.trim() !== '' && 
-                               !container.innerHTML.trim().startsWith('<!--') &&
-                               !container.innerHTML.includes('<!-- Orders will be loaded here -->');
-            
-            if (!hasContent) {
-                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
-            }
+            container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
         }
         
-        // Show the modal
-        ordersModal.classList.remove('hidden');
-        document.body.classList.add('modal-open');
-        
-        // Ensure content is visible after modal is shown
-        if (container) {
-            requestAnimationFrame(() => {
-                if (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--')) {
-                    container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
-                }
-            });
-        }
+        // Load orders
+        loadOrders();
     }
 }
 
-function closeOrdersModal() {
-    const ordersModal = document.getElementById('orders-modal');
-    if (ordersModal) {
-        ordersModal.classList.add('hidden');
-        document.body.classList.remove('modal-open');
+function hideCustomerOrdersSection() {
+    const customerOrdersSection = document.getElementById('customer-orders-section');
+    const vegetableSection = document.getElementById('vegetable-section');
+    
+    if (customerOrdersSection && vegetableSection) {
+        customerOrdersSection.classList.add('hidden');
+        customerOrdersSection.style.display = 'none';
+        vegetableSection.classList.remove('hidden');
+        vegetableSection.style.display = 'block';
     }
 }
 

@@ -535,14 +535,14 @@
             </div>
         </div>
 
-        <!-- Orders Modal -->
-        <div id="orders-modal" class="modal hidden">
-            <div class="modal-content" style="max-width: 900px;">
-                <span class="close" onclick="closeOrdersModal()" style="cursor: pointer; z-index: 100002; position: absolute; top: 15px; right: 20px;">&times;</span>
-                <h3 style="text-align: center; margin-bottom: 20px;">My Orders</h3>
-                <div id="orders-container" style="max-height: 600px; overflow-y: auto;">
-                    <!-- Orders will be loaded here -->
-                </div>
+        <!-- Customer Orders Section -->
+        <div id="customer-orders-section" class="hidden" style="display: none; margin-top: 20px; background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 30px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px); position: relative; z-index: 1;">
+            <div class="section-header" style="margin-bottom: 20px;">
+                <h3>My Orders</h3>
+                <button id="customer-back-to-vegetables-btn" class="btn btn-secondary">Back to Vegetables</button>
+            </div>
+            <div id="orders-container" style="max-height: 600px; overflow-y: auto;">
+                <!-- Orders will be loaded here -->
             </div>
         </div>
 
