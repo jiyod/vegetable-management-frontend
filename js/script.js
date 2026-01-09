@@ -507,11 +507,8 @@ async function handleLogin(e) {
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         
-        // Clear saved address for new user login
-        if (currentUser && currentUser.id) {
-            localStorage.removeItem(`lastShippingAddress_${currentUser.id}`);
-            localStorage.removeItem('lastShippingAddress');
-        }
+        // Address is retained across logouts - don't clear it
+        // This allows users to keep their saved address even after logging out
         
         showSuccessMessage('Login successful!');
         
@@ -559,17 +556,8 @@ async function handleRegister(e) {
             message += ' Your seller account will be reviewed by an admin for approval.';
         }
         
-        // Clear saved address for new customer accounts
-        if (role === 'customer') {
-            localStorage.removeItem('lastShippingAddress');
-            // Also clear any user-specific addresses (in case user ID was set)
-            const allKeys = Object.keys(localStorage);
-            allKeys.forEach(key => {
-                if (key.startsWith('lastShippingAddress_')) {
-                    localStorage.removeItem(key);
-                }
-            });
-        }
+        // Address is retained across logouts - don't clear it
+        // This allows users to keep their saved address even after logging out
         
         showSuccessMessage(message);
         // Clear the form
