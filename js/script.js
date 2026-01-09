@@ -3198,7 +3198,19 @@ async function loadOrders() {
 
 function displayOrders(orders) {
     const container = document.getElementById('orders-container');
-    if (!container) return;
+    if (!container) {
+        console.error('Orders container not found in displayOrders');
+        // Retry after a short delay
+        setTimeout(() => {
+            const retryContainer = document.getElementById('orders-container');
+            if (retryContainer) {
+                displayOrders(orders);
+            } else {
+                showErrorMessage('Orders container not found. Please refresh the page.');
+            }
+        }, 100);
+        return;
+    }
     
     // Validate orders array
     if (!Array.isArray(orders)) {
@@ -3522,7 +3534,11 @@ function showCustomerOrdersSection() {
         vegetableSection.style.display = 'none';
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
-        loadOrders();
+        
+        // Use requestAnimationFrame to ensure DOM is updated before loading (like seller side)
+        requestAnimationFrame(() => {
+            loadOrders();
+        });
     }
 }
 
