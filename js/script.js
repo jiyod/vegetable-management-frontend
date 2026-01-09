@@ -3157,6 +3157,15 @@ async function handleCheckout(e) {
 let ordersData = [];
 
 async function loadOrders() {
+    const container = document.getElementById('orders-container');
+    
+    // Ensure container exists before starting
+    if (!container) {
+        console.error('Orders container not found in loadOrders');
+        showErrorMessage('Orders container not found. Please refresh the page.');
+        return;
+    }
+    
     try {
         showLoading();
         const response = await axios.get('/orders', {
@@ -3169,6 +3178,9 @@ async function loadOrders() {
         // Ensure orders is an array
         if (!Array.isArray(ordersData)) {
             console.error('Invalid orders data format:', ordersData);
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Invalid orders data received from server.</p>';
+            }
             showErrorMessage('Invalid orders data received from server');
             return;
         }
@@ -3177,19 +3189,27 @@ async function loadOrders() {
             displayOrders(ordersData);
         } catch (displayError) {
             console.error('Error displaying orders:', displayError);
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Error displaying orders. Please refresh the page.</p>';
+            }
             showErrorMessage('Error displaying orders. Please refresh the page.');
         }
     } catch (error) {
         console.error('Failed to load orders:', error);
-        if (error.response) {
-            const data = error.response.data;
-            if (error.response.status === 401) {
-                handleInvalidToken();
+        if (container) {
+            if (error.response) {
+                const data = error.response.data;
+                if (error.response.status === 401) {
+                    handleInvalidToken();
+                    container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Session expired. Please login again.</p>';
+                } else {
+                    container.innerHTML = `<p style="text-align: center; color: #ef4444; padding: 40px;">${data.error?.description || 'Failed to load orders'}</p>`;
+                    showErrorMessage(data.error?.description || 'Failed to load orders');
+                }
             } else {
-                showErrorMessage(data.error?.description || 'Failed to load orders');
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Network error. Please try again.</p>';
+                showErrorMessage('Network error. Please try again.');
             }
-        } else {
-            showErrorMessage('Network error. Please try again.');
         }
     } finally {
         hideLoading();
@@ -3200,15 +3220,7 @@ function displayOrders(orders) {
     const container = document.getElementById('orders-container');
     if (!container) {
         console.error('Orders container not found in displayOrders');
-        // Retry after a short delay
-        setTimeout(() => {
-            const retryContainer = document.getElementById('orders-container');
-            if (retryContainer) {
-                displayOrders(orders);
-            } else {
-                showErrorMessage('Orders container not found. Please refresh the page.');
-            }
-        }, 100);
+        showErrorMessage('Orders container not found. Please refresh the page.');
         return;
     }
     
@@ -3219,7 +3231,7 @@ function displayOrders(orders) {
         return;
     }
     
-    if (orders.length === 0) {
+    if (!orders || orders.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">You have no orders yet.</p>';
         return;
     }
@@ -3528,6 +3540,7 @@ function cancelOrder(orderId) {
 function showCustomerOrdersSection() {
     const customerOrdersSection = document.getElementById('customer-orders-section');
     const vegetableSection = document.getElementById('vegetable-section');
+    const container = document.getElementById('orders-container');
     
     if (customerOrdersSection && vegetableSection) {
         vegetableSection.classList.add('hidden');
@@ -3535,10 +3548,20 @@ function showCustomerOrdersSection() {
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
         
-        // Use requestAnimationFrame to ensure DOM is updated before loading (like seller side)
+        // Ensure container is visible and set initial loading state
+        if (container) {
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
+            container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+        }
+        
+        // Use requestAnimationFrame to ensure DOM is updated before loading
         requestAnimationFrame(() => {
             loadOrders();
         });
+    } else {
+        console.error('Customer orders section elements not found');
+        showErrorMessage('Failed to show orders section. Please refresh the page.');
     }
 }
 
