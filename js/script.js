@@ -372,8 +372,23 @@ function setupEventListeners() {
                 }
             }
             
+            // Check if customer orders section is already visible
+            const customerOrdersSection = document.getElementById('customer-orders-section');
+            const isAlreadyVisible = customerOrdersSection && 
+                                     !customerOrdersSection.classList.contains('hidden') && 
+                                     customerOrdersSection.style.display !== 'none';
+            
             // Show customer orders section (inline, like seller side)
             showCustomerOrdersSection();
+            
+            // If already visible, force a refresh (like seller side does)
+            if (isAlreadyVisible) {
+                const container = document.getElementById('orders-container');
+                if (container) {
+                    container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+                }
+                await loadOrders();
+            }
         });
     }
     
@@ -3197,7 +3212,12 @@ async function loadOrders() {
     
     try {
         showLoading();
-        const response = await axios.get('/orders');
+        // Add cache-busting parameter to ensure fresh data (like seller side)
+        const response = await axios.get('/orders', {
+            params: {
+                _t: Date.now() // Cache busting
+            }
+        });
         ordersData = response.data;
         
         // Hide loading immediately after data is received
@@ -3546,13 +3566,16 @@ function showCustomerOrdersSection() {
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
         
-        // Set loading state
+        // Always refresh orders when showing the section (like seller side does)
+        // Set loading state first
         if (container) {
             container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
         }
         
-        // Load orders
-        loadOrders();
+        // Use a small delay to ensure section is visible before loading
+        setTimeout(() => {
+            loadOrders();
+        }, 50);
     }
 }
 
@@ -3588,7 +3611,11 @@ function closeOrderDetailsModal() {
 async function loadSellerOrders() {
     try {
         showLoading();
-        const response = await axios.get('/seller/orders/all');
+        const response = await axios.get('/seller/orders/all', {
+            params: {
+                _t: Date.now() // Cache busting
+            }
+        });
         const orders = response.data;
         
         // Ensure orders is an array
@@ -3640,12 +3667,12 @@ function displaySellerOrders(orders) {
     // Sort orders by status then by created_at desc (same as customer orders)
     // For seller orders, sort by the highest priority item status within each order
     const statusOrder = {
-        'pending': 1,
+        'pending': 1,      // Highest priority (shown first)
         'approved': 2,
-        'rejected': 3,
-        'processing': 4,
-        'delivered': 5,
-        'cancelled': 6
+        'processing': 3,
+        'delivered': 4,
+        'rejected': 5,
+        'cancelled': 6     // Lowest priority (shown last)
     };
     
     // First, filter and get seller items for each order to determine status
