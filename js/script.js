@@ -372,14 +372,45 @@ function setupEventListeners() {
                 }
             }
             
-            // Set loading state in container BEFORE opening modal
+            // Get modal and container references
+            const ordersModal = document.getElementById('orders-modal');
             const container = document.getElementById('orders-container');
-            if (container) {
-                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            
+            if (!ordersModal || !container) {
+                console.error('Orders modal or container not found');
+                showErrorMessage('Failed to open orders modal. Please refresh the page.');
+                return;
             }
             
-            // Open modal (this will show the loading state we just set)
-            openOrdersModal();
+            // Set loading state IMMEDIATELY before any other operations
+            const loadingHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            container.innerHTML = loadingHTML;
+            
+            // Remove hidden class to show modal
+            ordersModal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            
+            // Multiple safeguards to ensure loading state is visible
+            // 1. After modal is shown
+            setTimeout(() => {
+                if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--'))) {
+                    container.innerHTML = loadingHTML;
+                }
+            }, 10);
+            
+            // 2. After next frame
+            requestAnimationFrame(() => {
+                if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--'))) {
+                    container.innerHTML = loadingHTML;
+                }
+            });
+            
+            // 3. After a short delay
+            setTimeout(() => {
+                if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--'))) {
+                    container.innerHTML = loadingHTML;
+                }
+            }, 50);
             
             // Load orders and wait for completion
             await loadOrders();
@@ -3185,8 +3216,15 @@ async function loadOrders() {
     }
     
     if (container) {
-        // Show loading state in container immediately
+        // Show loading state in container immediately - force it
         container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+        
+        // Double-check after a microtask to ensure it's set
+        setTimeout(() => {
+            if (container && (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!-- Orders will be loaded here -->'))) {
+                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            }
+        }, 0);
     }
     
     try {
@@ -3493,21 +3531,31 @@ function openOrdersModal() {
     const container = document.getElementById('orders-container');
     
     if (ordersModal) {
-        // Ensure container shows loading state BEFORE showing modal
+        // Ensure container shows loading state
         if (container) {
             // Check if container is empty or only has comment
             const hasContent = container.innerHTML && 
                                container.innerHTML.trim() !== '' && 
-                               !container.innerHTML.trim().startsWith('<!--');
+                               !container.innerHTML.trim().startsWith('<!--') &&
+                               !container.innerHTML.includes('<!-- Orders will be loaded here -->');
             
             if (!hasContent) {
                 container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
             }
         }
         
-        // Now show the modal
+        // Show the modal
         ordersModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
+        
+        // Ensure content is visible after modal is shown
+        if (container) {
+            requestAnimationFrame(() => {
+                if (!container.innerHTML || container.innerHTML.trim() === '' || container.innerHTML.includes('<!--')) {
+                    container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+                }
+            });
+        }
     }
 }
 
