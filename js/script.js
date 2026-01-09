@@ -3283,10 +3283,8 @@ function displayOrders(orders) {
     container.innerHTML = sortedOrders.map(order => {
         const orderDate = new Date(order.created_at).toLocaleDateString('en-US', {
             year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            month: 'numeric',
+            day: 'numeric'
         });
         
         const statusColors = {
@@ -3303,30 +3301,67 @@ function displayOrders(orders) {
         const statusColor = statusColors[order.status] || '#6b7280';
         const canCancel = canCancelOrder(order);
         
+        // Generate items HTML similar to seller view
+        const itemsHtml = order.items && order.items.length > 0 ? order.items.map(item => {
+            const product = item.product || {};
+            const itemStatusColor = statusColors[item.status] || statusColor;
+            return `
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${itemStatusColor};">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 8px 0; color: #1a202c; font-size: 16px;">${product.name || 'Unknown Product'}</h4>
+                            <p style="margin: 4px 0; color: #718096; font-size: 14px;">Quantity: <strong>${parseFloat(item.quantity || 0).toFixed(2)} kg</strong></p>
+                            <p style="margin: 4px 0; color: #718096; font-size: 14px;">Price: ₱${parseFloat(item.price || 0).toFixed(2)} per kg</p>
+                            <p style="margin: 8px 0 0 0; color: #1a202c; font-weight: 600; font-size: 15px;">Subtotal: ₱${parseFloat(item.subtotal || 0).toFixed(2)}</p>
+                        </div>
+                        <div style="text-align: right; min-width: 150px;">
+                            ${item.status === 'delivered' ? `
+                                <span style="color: #10b981; font-size: 12px; font-weight: 600;">✓ Delivered</span>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('') : '<p style="text-align: center; color: #718096; padding: 20px;">No items found.</p>';
+        
         return `
-            <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="cursor: pointer;" onclick="viewOrderDetails(${order.id})">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+            <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
                     <div>
-                        <h4 style="margin: 0 0 5px; color: #1a202c;">Order #${order.order_number}</h4>
-                        <p style="margin: 0; color: #718096; font-size: 14px;">${orderDate}</p>
+                        <h3 style="margin: 0 0 5px 0; color: #1a202c;">Order #${order.order_number}</h3>
+                        <p style="margin: 5px 0; color: #718096; font-size: 14px;">Date: ${orderDate}</p>
                     </div>
                     <div style="text-align: right;">
-                        <span style="padding: 6px 12px; background: ${statusColor}; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: capitalize;">${order.status}</span>
-                        <p style="margin: 10px 0 0; color: #1a202c; font-size: 18px; font-weight: 600;">₱${parseFloat(order.total_amount).toFixed(2)}</p>
+                        <p style="margin: 0; color: #1a202c; font-size: 18px; font-weight: 700;">₱${parseFloat(order.total_amount || 0).toFixed(2)}</p>
                     </div>
                 </div>
-                <div style="border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                    <p style="margin: 0 0 10px; color: #4a5568; font-size: 14px;"><strong>Delivery Address:</strong></p>
-                    <p style="margin: 0; color: #718096; font-size: 14px;">${order.shipping_address}, ${order.shipping_city}${order.shipping_state ? ', ' + order.shipping_state : ''}${order.shipping_postal_code ? ' ' + order.shipping_postal_code : ''}</p>
-                    <p style="margin: 10px 0 0; color: #718096; font-size: 14px;"><strong>Items:</strong> ${order.items ? order.items.length : 0} item(s)</p>
+                <div style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #4a5568; font-size: 16px;">Delivery Address:</h4>
+                    <p style="margin: 0; color: #718096; font-size: 14px; line-height: 1.6;">
+                        ${order.shipping_address}<br>
+                        ${order.shipping_city}${order.shipping_state ? ', ' + order.shipping_state : ''} ${order.shipping_postal_code || ''}<br>
+                        ${order.shipping_country || 'Philippines'}
+                    </p>
                 </div>
-                </div>
-                ${canCancel ? `
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: right;">
-                        <button class="btn btn-danger" onclick="event.stopPropagation(); cancelOrder(${order.id});" style="font-size: 12px; padding: 8px 16px;">Cancel Order</button>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: #4a5568; font-size: 16px;">Order Status:</h4>
+                        <span style="padding: 8px 16px; background: ${statusColor}; color: white; border-radius: 6px; font-size: 14px; font-weight: 600; text-transform: capitalize;">
+                            ${order.status}
+                        </span>
                     </div>
-                ` : ''}
+                    ${canCancel ? `
+                        <div style="margin-top: 10px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                            <button class="btn btn-danger" onclick="cancelOrder(${order.id});" style="padding: 12px 24px; font-size: 14px; width: 100%;">
+                                Cancel Order
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 10px 0; color: #4a5568; font-size: 16px;">Items:</h4>
+                    ${itemsHtml}
+                </div>
             </div>
         `;
     }).join('');
