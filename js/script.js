@@ -355,8 +355,22 @@ function setupEventListeners() {
     const ordersBtn = document.getElementById('orders-btn');
     if (ordersBtn) {
         ordersBtn.addEventListener('click', () => {
-            loadOrders();
+            // Ensure currentUser is loaded before loading orders
+            if (!currentUser) {
+                const storedUser = localStorage.getItem('currentUser');
+                if (storedUser) {
+                    try {
+                        currentUser = JSON.parse(storedUser);
+                    } catch (e) {
+                        console.error('Error parsing currentUser:', e);
+                    }
+                }
+            }
             openOrdersModal();
+            // Load orders after modal is opened
+            setTimeout(() => {
+                loadOrders();
+            }, 100);
         });
     }
     
@@ -1357,6 +1371,12 @@ function displayUsers(users) {
                             ` : `
                                 <button class="btn btn-danger" disabled style="flex: 1; padding: 8px 12px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" title="${deleteButtonTitle}">Delete</button>
                             `}
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                            <button class="btn btn-warning" onclick="changeUserPassword(${user.id}, '${user.name.replace(/'/g, "\\'")}')" style="flex: 1; padding: 8px 12px; font-size: 12px; min-width: 80px;">Reset Password</button>
+                            ${!user.email_verified ? `
+                                <button class="btn btn-success" onclick="activateUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')" style="flex: 1; padding: 8px 12px; font-size: 12px; min-width: 80px;">Activate</button>
+                            ` : ''}
                         </div>
                         ${isCurrentUser(user.id) ? '<div style="font-size: 11px; color: #6b7280; font-style: italic; text-align: center; margin-top: 4px;">(Your account)</div>' : ''}
                     </div>
@@ -3122,7 +3142,22 @@ async function handleCheckout(e) {
 let ordersData = [];
 
 async function loadOrders() {
-    if (!currentUser || currentUser.role !== 'customer') return;
+    // Ensure currentUser is loaded
+    if (!currentUser) {
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                currentUser = JSON.parse(storedUser);
+            } catch (e) {
+                console.error('Error parsing currentUser:', e);
+                return;
+            }
+        } else {
+            return;
+        }
+    }
+    
+    if (currentUser.role !== 'customer') return;
     
     const container = document.getElementById('orders-container');
     if (container) {
