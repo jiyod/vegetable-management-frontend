@@ -351,85 +351,11 @@ function setupEventListeners() {
         });
     }
     
-    // Orders button
+    // Orders button (exact same pattern as seller side)
     const ordersBtn = document.getElementById('orders-btn');
     if (ordersBtn) {
-        ordersBtn.addEventListener('click', async () => {
-            // Ensure currentUser is loaded and is a customer
-            if (!currentUser) {
-                const storedUser = localStorage.getItem('currentUser');
-                if (storedUser) {
-                    try {
-                        currentUser = JSON.parse(storedUser);
-                    } catch (e) {
-                        console.error('Error parsing currentUser:', e);
-                        showErrorMessage('Failed to load user data. Please refresh the page.');
-                        return;
-                    }
-                } else {
-                    showErrorMessage('User not found. Please login again.');
-                    return;
-                }
-            }
-            
-            // Only allow customers to view orders
-            if (currentUser.role !== 'customer') {
-                showErrorMessage('Only customers can view orders.');
-                return;
-            }
-            
-            // Check if customer orders section is already visible
-            const customerOrdersSection = document.getElementById('customer-orders-section');
-            const container = document.getElementById('orders-container');
-            const isAlreadyVisible = customerOrdersSection && 
-                                     !customerOrdersSection.classList.contains('hidden') && 
-                                     customerOrdersSection.style.display !== 'none';
-            
-            // Always show the section first
-            if (customerOrdersSection) {
-                const vegetableSection = document.getElementById('vegetable-section');
-                if (vegetableSection) {
-                    vegetableSection.classList.add('hidden');
-                    vegetableSection.style.display = 'none';
-                }
-                customerOrdersSection.classList.remove('hidden');
-                customerOrdersSection.style.display = 'block';
-            }
-            
-            // Get container again after showing section to ensure it's accessible
-            const containerAfterShow = document.getElementById('orders-container');
-            
-            // Always set loading state with cancel button immediately (works on mobile too)
-            // Use multiple methods to ensure it's set
-            const loadingHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
-                    <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                        Cancel
-                    </button>
-                </div>
-            `;
-            
-            if (containerAfterShow) {
-                containerAfterShow.innerHTML = loadingHTML;
-            } else if (container) {
-                container.innerHTML = loadingHTML;
-            }
-            
-            // Use requestAnimationFrame to ensure DOM is updated before loading
-            requestAnimationFrame(() => {
-                const containerFinal = document.getElementById('orders-container');
-                if (containerFinal && (!containerFinal.innerHTML || containerFinal.innerHTML.trim() === '' || !containerFinal.innerHTML.includes('Loading orders'))) {
-                    containerFinal.innerHTML = loadingHTML;
-                }
-                
-                // Always refresh orders when button is clicked (like seller side)
-                // Force a fresh load every time, especially important on mobile
-                loadOrders().catch(error => {
-                    console.error('Error loading orders:', error);
-                    // Error handling is done in loadOrders() itself
-                });
-            });
+        ordersBtn.addEventListener('click', () => {
+            showCustomerOrdersSection();
         });
     }
     
@@ -1035,7 +961,6 @@ window.viewOrderDetails = viewOrderDetails;
 window.updateOrderItemStatus = updateOrderItemStatus;
 window.updateOrderStatus = updateOrderStatus;
 window.cancelOrder = cancelOrder;
-window.cancelLoadOrders = cancelLoadOrders;
 window.loadOrders = loadOrders;
 window.hideCustomerOrdersSection = hideCustomerOrdersSection;
 
@@ -3232,160 +3157,42 @@ async function handleCheckout(e) {
 let ordersData = [];
 
 async function loadOrders() {
-    const container = document.getElementById('orders-container');
-    
-    // Ensure currentUser is loaded
-    if (!currentUser) {
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-            try {
-                currentUser = JSON.parse(storedUser);
-            } catch (e) {
-                console.error('Error parsing currentUser:', e);
-                if (container) {
-                    container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Error loading user data. Please refresh the page.</p>';
-                }
-                return;
+    try {
+        showLoading();
+        const response = await axios.get('/orders', {
+            params: {
+                _t: Date.now() // Cache busting
             }
-        } else {
-            if (container) {
-                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">User not found. Please login again.</p>';
-            }
+        });
+        ordersData = response.data;
+        
+        // Ensure orders is an array
+        if (!Array.isArray(ordersData)) {
+            console.error('Invalid orders data format:', ordersData);
+            showErrorMessage('Invalid orders data received from server');
             return;
         }
-    }
-    
-    if (currentUser.role !== 'customer') {
-        if (container) {
-            container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Only customers can view orders.</p>';
-        }
-        return;
-    }
-    
-    // Store abort controller globally so it can be cancelled
-    if (window.currentOrdersController) {
-        window.currentOrdersController.abort();
-    }
-    window.currentOrdersController = new AbortController();
-    
-    // Ensure container exists and is accessible
-    if (!container) {
-        console.error('Orders container not found');
-        return;
-    }
-    
-    // Show loading state with cancel button - only update if not already showing loading
-    const loadingHTML = `
-        <div style="text-align: center; padding: 40px;">
-            <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
-            <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                Cancel
-            </button>
-        </div>
-    `;
-    
-    // Only update if container is empty or doesn't have loading state
-    if (!container.innerHTML || container.innerHTML.trim() === '' || !container.innerHTML.includes('Loading orders')) {
-        container.innerHTML = loadingHTML;
-    }
-    
-    // Double-check after a microtask to ensure it's set
-    setTimeout(() => {
-        const containerCheck = document.getElementById('orders-container');
-        if (containerCheck && (!containerCheck.innerHTML || containerCheck.innerHTML.trim() === '' || !containerCheck.innerHTML.includes('Loading orders'))) {
-            containerCheck.innerHTML = loadingHTML;
-        }
-    }, 0);
-    
-    try {
-        // Add cache-busting parameter to ensure fresh data (like seller side)
-        // Use AbortController for timeout to ensure it works properly
-        const controller = window.currentOrdersController;
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
         
         try {
-            const response = await axios.get('/orders', {
-                params: {
-                    _t: Date.now() // Cache busting
-                },
-                signal: controller.signal,
-                timeout: 15000 // 15 second timeout as backup
-            });
-            
-            clearTimeout(timeoutId);
-            ordersData = response.data;
-            
-            // Clear controller on success
-            window.currentOrdersController = null;
-            
-            // Display orders
             displayOrders(ordersData);
-        } catch (requestError) {
-            clearTimeout(timeoutId);
-            window.currentOrdersController = null;
-            throw requestError;
+        } catch (displayError) {
+            console.error('Error displaying orders:', displayError);
+            showErrorMessage('Error displaying orders. Please refresh the page.');
         }
     } catch (error) {
-        console.error('Load orders error:', error);
-        
-        if (error.name === 'AbortError' || error.message === 'Request timeout' || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            if (container) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px;">
-                        <p style="color: #ef4444; margin-bottom: 20px;">Request timed out after 15 seconds. Please check your connection and try again.</p>
-                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <button onclick="loadOrders()" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
-                                Retry
-                            </button>
-                            <button onclick="hideCustomerOrdersSection()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                                Go Back
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-            showErrorMessage('Request timed out. Please check your connection and try again.');
-        } else if (error.response && error.response.status === 401) {
-            handleInvalidToken();
-            if (container) {
-                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Session expired. Please login again.</p>';
-            }
-        } else if (error.response) {
+        console.error('Failed to load orders:', error);
+        if (error.response) {
             const data = error.response.data;
-            showErrorMessage(data.error?.description || 'Failed to load orders. Please try again.');
-            if (container) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px;">
-                        <p style="color: #ef4444; margin-bottom: 20px;">${data.error?.description || 'Failed to load orders. Please try again.'}</p>
-                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <button onclick="loadOrders()" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
-                                Retry
-                            </button>
-                            <button onclick="hideCustomerOrdersSection()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                                Go Back
-                            </button>
-                        </div>
-                    </div>
-                `;
+            if (error.response.status === 401) {
+                handleInvalidToken();
+            } else {
+                showErrorMessage(data.error?.description || 'Failed to load orders');
             }
         } else {
-            showErrorMessage('Network error. Please check your connection and try again.');
-            if (container) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px;">
-                        <p style="color: #ef4444; margin-bottom: 20px;">Network error. Please check your connection and try again.</p>
-                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <button onclick="loadOrders()" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
-                                Retry
-                            </button>
-                            <button onclick="hideCustomerOrdersSection()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                                Go Back
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+            showErrorMessage('Network error. Please try again.');
         }
+    } finally {
+        hideLoading();
     }
 }
 
@@ -3704,72 +3511,15 @@ function showCustomerOrdersSection() {
     const vegetableSection = document.getElementById('vegetable-section');
     
     if (customerOrdersSection && vegetableSection) {
-        // Hide vegetable section
         vegetableSection.classList.add('hidden');
         vegetableSection.style.display = 'none';
-        
-        // Show customer orders section
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
-        
-        // Get container after showing section to ensure it's accessible
-        const container = document.getElementById('orders-container');
-        
-        // Always refresh orders when showing the section (like seller side does)
-        // Set loading state with cancel button immediately
-        const loadingHTML = `
-            <div style="text-align: center; padding: 40px;">
-                <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
-                <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                    Cancel
-                </button>
-            </div>
-        `;
-        
-        if (container) {
-            container.innerHTML = loadingHTML;
-        }
-        
-        // Use requestAnimationFrame to ensure DOM is updated and container is ready
-        requestAnimationFrame(() => {
-            const containerFinal = document.getElementById('orders-container');
-            if (containerFinal) {
-                // Double-check loading state is set
-                if (!containerFinal.innerHTML || containerFinal.innerHTML.trim() === '' || !containerFinal.innerHTML.includes('Loading orders')) {
-                    containerFinal.innerHTML = loadingHTML;
-                }
-            }
-            
-            // Use a small delay to ensure section is fully visible before loading
-            setTimeout(() => {
-                loadOrders();
-            }, 50);
-        });
+        loadOrders();
     }
-}
-
-function cancelLoadOrders() {
-    // Cancel any ongoing orders request
-    if (window.currentOrdersController) {
-        window.currentOrdersController.abort();
-        window.currentOrdersController = null;
-    }
-    // Clear the container
-    const container = document.getElementById('orders-container');
-    if (container) {
-        container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading cancelled.</p>';
-    }
-    // Go back to vegetables
-    hideCustomerOrdersSection();
 }
 
 function hideCustomerOrdersSection() {
-    // Cancel any ongoing orders request
-    if (window.currentOrdersController) {
-        window.currentOrdersController.abort();
-        window.currentOrdersController = null;
-    }
-    
     const customerOrdersSection = document.getElementById('customer-orders-section');
     const vegetableSection = document.getElementById('vegetable-section');
     
