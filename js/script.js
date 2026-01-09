@@ -3290,23 +3290,32 @@ function displayOrders(orders) {
         const statusColors = {
             'pending': '#f59e0b',
             'approved': '#3b82f6',
-            'confirmed': '#3b82f6',
+            'rejected': '#ef4444',
             'processing': '#8b5cf6',
-            'shipped': '#6366f1',
             'delivered': '#10b981',
-            'cancelled': '#ef4444',
-            'refunded': '#6b7280'
+            'cancelled': '#ef4444'
         };
         
-        const statusColor = statusColors[order.status] || '#6b7280';
+        const statusColor = statusColors[order.status] || '#718096';
         const canCancel = canCancelOrder(order);
         
-        // Generate items HTML similar to seller view
+        // Order-level action buttons (cancel for customers)
+        let orderActionButtons = '';
+        if (canCancel) {
+            orderActionButtons = `
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <button onclick="cancelOrder(${order.id})" class="btn btn-danger" style="padding: 12px 24px; font-size: 14px; flex: 1;">
+                        Cancel Order
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Generate items HTML exactly like seller view
         const itemsHtml = order.items && order.items.length > 0 ? order.items.map(item => {
             const product = item.product || {};
-            const itemStatusColor = statusColors[item.status] || statusColor;
             return `
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${itemStatusColor};">
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${statusColor};">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <div style="flex: 1;">
                             <h4 style="margin: 0 0 8px 0; color: #1a202c; font-size: 16px;">${product.name || 'Unknown Product'}</h4>
@@ -3350,13 +3359,7 @@ function displayOrders(orders) {
                             ${order.status}
                         </span>
                     </div>
-                    ${canCancel ? `
-                        <div style="margin-top: 10px; padding: 15px; background: #f9fafb; border-radius: 8px;">
-                            <button class="btn btn-danger" onclick="cancelOrder(${order.id});" style="padding: 12px 24px; font-size: 14px; width: 100%;">
-                                Cancel Order
-                            </button>
-                        </div>
-                    ` : ''}
+                    ${orderActionButtons}
                 </div>
                 <div>
                     <h4 style="margin: 0 0 10px 0; color: #4a5568; font-size: 16px;">Items:</h4>
