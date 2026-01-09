@@ -3509,13 +3509,20 @@ function cancelOrder(orderId) {
 function showCustomerOrdersSection() {
     const customerOrdersSection = document.getElementById('customer-orders-section');
     const vegetableSection = document.getElementById('vegetable-section');
+    const container = document.getElementById('orders-container');
     
-    if (customerOrdersSection && vegetableSection) {
+    if (customerOrdersSection && vegetableSection && container) {
         vegetableSection.classList.add('hidden');
         vegetableSection.style.display = 'none';
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
         loadOrders();
+    } else {
+        console.error('Customer orders section elements not found:', {
+            customerOrdersSection: !!customerOrdersSection,
+            vegetableSection: !!vegetableSection,
+            container: !!container
+        });
     }
 }
 
