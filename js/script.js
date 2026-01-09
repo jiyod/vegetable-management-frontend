@@ -396,21 +396,40 @@ function setupEventListeners() {
                 customerOrdersSection.style.display = 'block';
             }
             
-            // Always set loading state and refresh orders (works on mobile too)
-            if (container) {
-                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            // Get container again after showing section to ensure it's accessible
+            const containerAfterShow = document.getElementById('orders-container');
+            
+            // Always set loading state with cancel button immediately (works on mobile too)
+            // Use multiple methods to ensure it's set
+            const loadingHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
+                    <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
+                        Cancel
+                    </button>
+                </div>
+            `;
+            
+            if (containerAfterShow) {
+                containerAfterShow.innerHTML = loadingHTML;
+            } else if (container) {
+                container.innerHTML = loadingHTML;
             }
             
-            // Always refresh orders when button is clicked (like seller side)
-            // Force a fresh load every time, especially important on mobile
-            try {
-                await loadOrders();
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                if (container) {
-                    container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Failed to load orders. Please try again.</p>';
+            // Use requestAnimationFrame to ensure DOM is updated before loading
+            requestAnimationFrame(() => {
+                const containerFinal = document.getElementById('orders-container');
+                if (containerFinal && (!containerFinal.innerHTML || containerFinal.innerHTML.trim() === '' || !containerFinal.innerHTML.includes('Loading orders'))) {
+                    containerFinal.innerHTML = loadingHTML;
                 }
-            }
+                
+                // Always refresh orders when button is clicked (like seller side)
+                // Force a fresh load every time, especially important on mobile
+                loadOrders().catch(error => {
+                    console.error('Error loading orders:', error);
+                    // Error handling is done in loadOrders() itself
+                });
+            });
         });
     }
     
@@ -3249,17 +3268,34 @@ async function loadOrders() {
     }
     window.currentOrdersController = new AbortController();
     
-    if (container) {
-        // Show loading state with cancel button
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px;">
-                <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
-                <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
-                    Cancel
-                </button>
-            </div>
-        `;
+    // Ensure container exists and is accessible
+    if (!container) {
+        console.error('Orders container not found');
+        return;
     }
+    
+    // Show loading state with cancel button - only update if not already showing loading
+    const loadingHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
+            <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
+                Cancel
+            </button>
+        </div>
+    `;
+    
+    // Only update if container is empty or doesn't have loading state
+    if (!container.innerHTML || container.innerHTML.trim() === '' || !container.innerHTML.includes('Loading orders')) {
+        container.innerHTML = loadingHTML;
+    }
+    
+    // Double-check after a microtask to ensure it's set
+    setTimeout(() => {
+        const containerCheck = document.getElementById('orders-container');
+        if (containerCheck && (!containerCheck.innerHTML || containerCheck.innerHTML.trim() === '' || !containerCheck.innerHTML.includes('Loading orders'))) {
+            containerCheck.innerHTML = loadingHTML;
+        }
+    }, 0);
     
     try {
         // Add cache-busting parameter to ensure fresh data (like seller side)
@@ -3666,7 +3702,6 @@ function cancelOrder(orderId) {
 function showCustomerOrdersSection() {
     const customerOrdersSection = document.getElementById('customer-orders-section');
     const vegetableSection = document.getElementById('vegetable-section');
-    const container = document.getElementById('orders-container');
     
     if (customerOrdersSection && vegetableSection) {
         // Hide vegetable section
@@ -3677,16 +3712,39 @@ function showCustomerOrdersSection() {
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
         
+        // Get container after showing section to ensure it's accessible
+        const container = document.getElementById('orders-container');
+        
         // Always refresh orders when showing the section (like seller side does)
-        // Set loading state first
+        // Set loading state with cancel button immediately
+        const loadingHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <p style="color: #718096; margin-bottom: 20px;">Loading orders...</p>
+                <button onclick="cancelLoadOrders()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;">
+                    Cancel
+                </button>
+            </div>
+        `;
+        
         if (container) {
-            container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            container.innerHTML = loadingHTML;
         }
         
-        // Use a small delay to ensure section is visible before loading
-        setTimeout(() => {
-            loadOrders();
-        }, 50);
+        // Use requestAnimationFrame to ensure DOM is updated and container is ready
+        requestAnimationFrame(() => {
+            const containerFinal = document.getElementById('orders-container');
+            if (containerFinal) {
+                // Double-check loading state is set
+                if (!containerFinal.innerHTML || containerFinal.innerHTML.trim() === '' || !containerFinal.innerHTML.includes('Loading orders')) {
+                    containerFinal.innerHTML = loadingHTML;
+                }
+            }
+            
+            // Use a small delay to ensure section is fully visible before loading
+            setTimeout(() => {
+                loadOrders();
+            }, 50);
+        });
     }
 }
 
@@ -3695,6 +3753,11 @@ function cancelLoadOrders() {
     if (window.currentOrdersController) {
         window.currentOrdersController.abort();
         window.currentOrdersController = null;
+    }
+    // Clear the container
+    const container = document.getElementById('orders-container');
+    if (container) {
+        container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading cancelled.</p>';
     }
     // Go back to vegetables
     hideCustomerOrdersSection();
