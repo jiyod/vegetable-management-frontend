@@ -355,7 +355,7 @@ function setupEventListeners() {
     const ordersBtn = document.getElementById('orders-btn');
     if (ordersBtn) {
         ordersBtn.addEventListener('click', async () => {
-            // Ensure currentUser is loaded before loading orders
+            // Ensure currentUser is loaded and is a customer
             if (!currentUser) {
                 const storedUser = localStorage.getItem('currentUser');
                 if (storedUser) {
@@ -370,6 +370,12 @@ function setupEventListeners() {
                     showErrorMessage('User not found. Please login again.');
                     return;
                 }
+            }
+            
+            // Only allow customers to view orders
+            if (currentUser.role !== 'customer') {
+                showErrorMessage('Only customers can view orders.');
+                return;
             }
             
             // Check if customer orders section is already visible
@@ -396,10 +402,15 @@ function setupEventListeners() {
             }
             
             // Always refresh orders when button is clicked (like seller side)
-            // Use a small delay to ensure section is visible, especially on mobile
-            setTimeout(async () => {
+            // Force a fresh load every time, especially important on mobile
+            try {
                 await loadOrders();
-            }, isAlreadyVisible ? 0 : 100);
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                if (container) {
+                    container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Failed to load orders. Please try again.</p>';
+                }
+            }
         });
     }
     
@@ -646,6 +657,20 @@ async function handleLogout() {
         localStorage.removeItem('currentUser');
         authToken = null;
         currentUser = null;
+        
+        // Hide all sections before showing auth section
+        hideCustomerOrdersSection();
+        const sellerOrdersSection = document.getElementById('seller-orders-section');
+        if (sellerOrdersSection) {
+            sellerOrdersSection.classList.add('hidden');
+            sellerOrdersSection.style.display = 'none';
+        }
+        const vegetableSection = document.getElementById('vegetable-section');
+        if (vegetableSection) {
+            vegetableSection.classList.add('hidden');
+            vegetableSection.style.display = 'none';
+        }
+        
         showAuthSection();
         showSuccessMessage('Logged out successfully');
     }
@@ -1797,6 +1822,12 @@ function showAuthSection() {
     if (sellerOrdersSection) {
         sellerOrdersSection.classList.add('hidden');
         sellerOrdersSection.style.display = 'none';
+    }
+    // Hide customer orders section
+    const customerOrdersSection = document.getElementById('customer-orders-section');
+    if (customerOrdersSection) {
+        customerOrdersSection.classList.add('hidden');
+        customerOrdersSection.style.display = 'none';
     }
     // Hide customer sellers section
     const customerSellersSection = document.getElementById('customer-sellers-section');
