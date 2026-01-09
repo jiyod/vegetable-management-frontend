@@ -3159,12 +3159,14 @@ let ordersData = [];
 async function loadOrders() {
     try {
         showLoading();
+        console.log('Loading customer orders...');
         const response = await axios.get('/orders', {
             params: {
                 _t: Date.now() // Cache busting
             }
         });
         ordersData = response.data;
+        console.log('Orders data received:', ordersData);
         
         // Ensure orders is an array
         if (!Array.isArray(ordersData)) {
@@ -3173,11 +3175,17 @@ async function loadOrders() {
             return;
         }
         
+        console.log('Calling displayOrders with', ordersData.length, 'orders');
         try {
             displayOrders(ordersData);
+            console.log('displayOrders completed');
         } catch (displayError) {
             console.error('Error displaying orders:', displayError);
-            showErrorMessage('Error displaying orders. Please refresh the page.');
+            const container = document.getElementById('orders-container');
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Error displaying orders. Please check the console for details.</p>';
+            }
+            showErrorMessage('Error displaying orders. Please check the console for details.');
         }
     } catch (error) {
         console.error('Failed to load orders:', error);
@@ -3197,13 +3205,28 @@ async function loadOrders() {
 }
 
 function displayOrders(orders) {
+    console.log('displayOrders called with', orders);
     const container = document.getElementById('orders-container');
-    if (!container) return;
+    if (!container) {
+        console.error('Orders container not found in displayOrders');
+        showErrorMessage('Orders container not found. Please refresh the page.');
+        return;
+    }
+    console.log('Container found:', container);
+    
+    if (!Array.isArray(orders)) {
+        console.error('displayOrders: orders is not an array:', orders);
+        container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 40px;">Error: Invalid orders data format.</p>';
+        return;
+    }
     
     if (orders.length === 0) {
+        console.log('No orders to display');
         container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">You have no orders yet.</p>';
         return;
     }
+    
+    console.log('Rendering', orders.length, 'orders');
 
     // Sort orders by status then by created_at desc
     const statusOrder = {
@@ -3509,20 +3532,28 @@ function cancelOrder(orderId) {
 function showCustomerOrdersSection() {
     const customerOrdersSection = document.getElementById('customer-orders-section');
     const vegetableSection = document.getElementById('vegetable-section');
-    const container = document.getElementById('orders-container');
     
-    if (customerOrdersSection && vegetableSection && container) {
+    if (customerOrdersSection && vegetableSection) {
         vegetableSection.classList.add('hidden');
         vegetableSection.style.display = 'none';
         customerOrdersSection.classList.remove('hidden');
         customerOrdersSection.style.display = 'block';
+        
+        // Verify container exists after showing section
+        const container = document.getElementById('orders-container');
+        if (!container) {
+            console.error('Orders container not found after showing section');
+            showErrorMessage('Orders container not found. Please refresh the page.');
+            return;
+        }
+        
         loadOrders();
     } else {
         console.error('Customer orders section elements not found:', {
             customerOrdersSection: !!customerOrdersSection,
-            vegetableSection: !!vegetableSection,
-            container: !!container
+            vegetableSection: !!vegetableSection
         });
+        showErrorMessage('Failed to show orders section. Please refresh the page.');
     }
 }
 
