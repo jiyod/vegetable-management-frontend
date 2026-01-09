@@ -374,21 +374,32 @@ function setupEventListeners() {
             
             // Check if customer orders section is already visible
             const customerOrdersSection = document.getElementById('customer-orders-section');
+            const container = document.getElementById('orders-container');
             const isAlreadyVisible = customerOrdersSection && 
                                      !customerOrdersSection.classList.contains('hidden') && 
                                      customerOrdersSection.style.display !== 'none';
             
-            // Show customer orders section (inline, like seller side)
-            showCustomerOrdersSection();
-            
-            // If already visible, force a refresh (like seller side does)
-            if (isAlreadyVisible) {
-                const container = document.getElementById('orders-container');
-                if (container) {
-                    container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            // Always show the section first
+            if (customerOrdersSection) {
+                const vegetableSection = document.getElementById('vegetable-section');
+                if (vegetableSection) {
+                    vegetableSection.classList.add('hidden');
+                    vegetableSection.style.display = 'none';
                 }
-                await loadOrders();
+                customerOrdersSection.classList.remove('hidden');
+                customerOrdersSection.style.display = 'block';
             }
+            
+            // Always set loading state and refresh orders (works on mobile too)
+            if (container) {
+                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            }
+            
+            // Always refresh orders when button is clicked (like seller side)
+            // Use a small delay to ensure section is visible, especially on mobile
+            setTimeout(async () => {
+                await loadOrders();
+            }, isAlreadyVisible ? 0 : 100);
         });
     }
     
