@@ -372,14 +372,14 @@ function setupEventListeners() {
                 }
             }
             
-            // Open modal first and show loading state
-            openOrdersModal();
-            
-            // Set loading state in container immediately
+            // Set loading state in container BEFORE opening modal
             const container = document.getElementById('orders-container');
             if (container) {
                 container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
             }
+            
+            // Open modal (this will show the loading state we just set)
+            openOrdersModal();
             
             // Load orders and wait for completion
             await loadOrders();
@@ -3490,15 +3490,24 @@ function cancelOrder(orderId) {
 
 function openOrdersModal() {
     const ordersModal = document.getElementById('orders-modal');
+    const container = document.getElementById('orders-container');
+    
     if (ordersModal) {
+        // Ensure container shows loading state BEFORE showing modal
+        if (container) {
+            // Check if container is empty or only has comment
+            const hasContent = container.innerHTML && 
+                               container.innerHTML.trim() !== '' && 
+                               !container.innerHTML.trim().startsWith('<!--');
+            
+            if (!hasContent) {
+                container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
+            }
+        }
+        
+        // Now show the modal
         ordersModal.classList.remove('hidden');
         document.body.classList.add('modal-open');
-        
-        // Ensure container shows loading state if empty
-        const container = document.getElementById('orders-container');
-        if (container && (!container.innerHTML || container.innerHTML.trim() === '')) {
-            container.innerHTML = '<p style="text-align: center; color: #718096; padding: 40px;">Loading orders...</p>';
-        }
     }
 }
 
